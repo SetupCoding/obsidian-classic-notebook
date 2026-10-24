@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.2 desktop beta
+
+- Move the native vault switcher, help and settings footer to the bottom right, including with the left sidebar expanded.
+- Keep the status bar visible beside the footer and restore its placement when disabling the plugin.
+
 ## 3.4.1 desktop beta
 
 - Keep Obsidian's native vault switcher, help and settings controls reachable at the bottom left when the left sidebar is collapsed, including with the ribbon hidden.

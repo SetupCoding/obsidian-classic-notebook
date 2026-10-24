@@ -229,9 +229,10 @@ body.classic-notebook.cn-classic-colors {
 .classic-notebook .sidebar-toggle-button.mod-left { visibility:hidden; }
 .classic-notebook button.tn-ribbon-toggle { position:fixed; left:8px; top:7px; z-index:300; -webkit-app-region:no-drag; }
 
-/* A reserved footer keeps vault/settings reachable with either left rail hidden. */
+/* Keep vault/settings at the bottom right, with editor and status-bar space. */
 .classic-notebook.cn-vault-dock-floating .workspace { padding-bottom:40px; }
-.classic-notebook .cn-notebook-vault-dock { position:fixed; left:0; bottom:0; width:min(320px,calc(100vw - 140px)); height:40px; z-index:250; -webkit-app-region:no-drag; background:var(--tn-surface); border-top:1px solid var(--tn-border); border-right:1px solid var(--tn-border); }
+.classic-notebook.cn-vault-dock-floating .status-bar { right:min(320px,calc(100vw - 140px)); max-width:calc(100vw - min(320px,calc(100vw - 140px))); }
+.classic-notebook .cn-notebook-vault-dock { position:fixed; right:0; bottom:0; width:min(320px,calc(100vw - 140px)); height:40px; z-index:250; -webkit-app-region:no-drag; background:var(--tn-surface); border-top:1px solid var(--tn-border); border-left:1px solid var(--tn-border); }
 .classic-notebook .cn-notebook-vault-dock[hidden] { display:none!important; }
 .classic-notebook .cn-notebook-vault-profile { display:flex!important; }
 .classic-notebook .cn-notebook-vault-dock .cn-notebook-vault-profile { align-items:center; justify-content:space-between; height:100%; gap:4px; padding:4px 8px; background:transparent; color:var(--tn-text); }

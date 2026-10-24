@@ -3511,12 +3511,12 @@ const notebookSettingsMethods = {
 
 Object.assign(module.exports.prototype, notebookSettingsMethods);
 
-// Keep Obsidian's own vault menu/help/settings handlers. Only their placement
-// changes when the left sidebar is collapsed; restore the native DOM on unload.
+// Keep Obsidian's own vault menu/help/settings handlers. Place the controls
+// at the bottom right and restore the native DOM on unload.
 const notebookVaultControlMethods = {
   mountNotebookVaultControls() {
     if (this.notebookVaultControls) return;
-    const workspace = this.app.workspace, doc = workspace.containerEl.ownerDocument, win = doc.defaultView;
+    const workspace = this.app.workspace, doc = workspace.containerEl.ownerDocument;
     const state = this.notebookVaultControls = { active: true, profile: null, dock: null, attributes: [] };
     const restoreProfile = () => {
       if (!state.profile || !state.home) return;
@@ -3547,19 +3547,12 @@ const notebookVaultControlMethods = {
         if (actions?.firstElementChild !== actions?.lastElementChild) accessible(actions?.firstElementChild, 'Hilfe öffnen');
         accessible(actions?.lastElementChild, 'Einstellungen öffnen');
       }
-      const floating = !!workspace.leftSplit?.collapsed;
-      if (floating) {
-        if (state.profile.parentElement !== state.dock) state.dock.append(state.profile);
-      } else restoreProfile();
-      state.dock.hidden = !floating;
-      doc.body.classList.toggle('cn-vault-dock-floating', floating);
+      if (state.profile.parentElement !== state.dock) state.dock.append(state.profile);
+      doc.body.classList.add('cn-vault-dock-floating');
     };
     this.registerEvent(workspace.on('layout-change', update));
-    if (win.ResizeObserver && workspace.leftSplit?.containerEl) {
-      state.resize = new win.ResizeObserver(update); state.resize.observe(workspace.leftSplit.containerEl);
-    }
     this.register(() => {
-      state.active = false; state.resize?.disconnect(); restoreProfile();
+      state.active = false; restoreProfile();
       state.profile?.classList.remove('cn-notebook-vault-profile');
       for (const { element, name, previous } of state.attributes) {
         if (previous == null) element.removeAttribute(name); else element.setAttribute(name, previous);

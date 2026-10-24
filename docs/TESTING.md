@@ -1,8 +1,8 @@
 # Beta validation and remaining work
 
-## 3.4.1 footer checks
+## 3.4.2 footer checks
 
-The browser suite exercises the actual bundle's native-footer relocation, preserved click handlers, keyboard activation, collapsed/expanded sidebar, hidden ribbon, narrow viewport, dark styling, repeated setup and unload restoration (including a temporarily detached native sidebar). Live application verification is recorded separately from these simulated Obsidian objects.
+The browser suite exercises the actual bundle's native-footer relocation, preserved click handlers, keyboard activation, bottom-right placement with collapsed/expanded sidebar, hidden ribbon, status-bar clearance in wide/narrow viewports, dark styling, repeated setup and unload restoration (including a temporarily detached native sidebar). Live application verification is recorded separately from these simulated Obsidian objects.
 
 ## 3.4.0 validation scope
 
