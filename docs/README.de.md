@@ -1,6 +1,6 @@
 # Classic Notebook
 
-Obsidian-Plugin mit einer klassischen Notizbuch-Oberfläche, inspiriert von OneNote. Aktueller Stand: **3.4.0**. Desktop-Beta für Obsidian ab 1.14.5. Die bestehende Oberfläche wurde unter Windows mit 1.14.5 verwendet; der Prüfstand der Beta steht in TESTING.md.
+Obsidian-Plugin mit einer klassischen Notizbuch-Oberfläche, inspiriert von OneNote. Aktueller Stand: **3.4.1**. Desktop-Beta für Obsidian ab 1.14.5. Die bestehende Oberfläche wurde unter Windows mit 1.14.5 verwendet; der Prüfstand der Beta steht in TESTING.md.
 
 Klassische Notizbuch-Oberfläche mit Abschnittsreitern oben und einer Seitenliste rechts. Unterstützt Abschnittsgruppen, Abschnittsfarben, eine Seitenhierarchie mit bis zu fünf Ebenen, Drag-and-drop und einklappbaren Unterseiten, native Canvas-Seiten, Anlegedatum, automatische Links und einen Hell/Dunkel-Schalter.
 
@@ -94,3 +94,8 @@ Unter Einstellungen → Classic Notebook lassen sich das Format neuer Seiten (Ca
 Der Quellcode liegt in den beiden Git-Repositories. `npm run vaults:plan` zeigt die Unterschiede zu den konfigurierten Vaults. `npm run vaults:sync` prüft und verteilt beide Plugins; `npm run vaults:check` kontrolliert die installierten Dateien. Unter Windows startet `Sync-Vaults.cmd` denselben Vorgang. Die Einrichtung steht in [VAULT-SYNC.md](VAULT-SYNC.md). Einstellungen, Notizen und Importprofile bleiben pro Vault erhalten.
 
 Die [Roadmap](ROADMAP.md) unterscheidet zwischen eingebauten Funktionen und den noch geplanten Verbesserungen aus dem [Fluent-Vergleich](FLUENT-COMPARISON.de.md).
+
+
+## Vault wechseln und Einstellungen
+
+Unten links bleiben Obsidian-Vault-Wechsler, Hilfe und Einstellungsrad erreichbar. Bei eingeklappter linker Seitenleiste liegt die Leiste in einem eigenen unteren Bereich, der auch bei ausgeblendeter Symbolleiste sichtbar bleibt. Beim Aufklappen wandert die originale Leiste zurück in die Seitenleiste. Die nativen Klickaktionen bleiben erhalten; die Bedienelemente sind zusätzlich per Tab und Enter/Leertaste erreichbar. Beim Deaktivieren stellt das Plugin den ursprünglichen Platz und die Attribute wieder her.

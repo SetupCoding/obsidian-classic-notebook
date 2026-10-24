@@ -229,6 +229,20 @@ body.classic-notebook.cn-classic-colors {
 .classic-notebook .sidebar-toggle-button.mod-left { visibility:hidden; }
 .classic-notebook button.tn-ribbon-toggle { position:fixed; left:8px; top:7px; z-index:300; -webkit-app-region:no-drag; }
 
+/* A reserved footer keeps vault/settings reachable with either left rail hidden. */
+.classic-notebook.cn-vault-dock-floating .workspace { padding-bottom:40px; }
+.classic-notebook .cn-notebook-vault-dock { position:fixed; left:0; bottom:0; width:min(320px,calc(100vw - 140px)); height:40px; z-index:250; -webkit-app-region:no-drag; background:var(--tn-surface); border-top:1px solid var(--tn-border); border-right:1px solid var(--tn-border); }
+.classic-notebook .cn-notebook-vault-dock[hidden] { display:none!important; }
+.classic-notebook .cn-notebook-vault-profile { display:flex!important; }
+.classic-notebook .cn-notebook-vault-dock .cn-notebook-vault-profile { align-items:center; justify-content:space-between; height:100%; gap:4px; padding:4px 8px; background:transparent; color:var(--tn-text); }
+.classic-notebook .cn-notebook-vault-dock .workspace-drawer-vault-switcher { display:flex; align-items:center; flex:1 1 auto; min-width:0; gap:8px; padding:4px 7px; border-radius:4px; cursor:pointer; }
+.classic-notebook .cn-notebook-vault-dock .workspace-drawer-vault-switcher:hover { background:var(--tn-hover); }
+.classic-notebook .cn-notebook-vault-dock .workspace-drawer-vault-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:600; }
+.classic-notebook .cn-notebook-vault-dock .workspace-drawer-vault-switcher-icon { display:flex; flex:0 0 auto; color:var(--tn-muted); }
+.classic-notebook .cn-notebook-vault-dock .workspace-drawer-vault-switcher-icon svg { width:15px; height:15px; }
+.classic-notebook .cn-notebook-vault-dock .workspace-drawer-vault-actions { display:flex; align-items:center; flex:0 0 auto; gap:3px; }
+.classic-notebook .cn-notebook-vault-profile [role=button]:focus-visible { outline:2px solid var(--tn-accent); outline-offset:-2px; }
+
 /* Converted cards use Canvas editing, resizing, deletion and history. */
 .tn-canvas-imported-card .canvas-node-content .markdown-preview-view {padding:10px 12px 15px!important;display:block!important;scrollbar-gutter:auto!important;scrollbar-width:none!important;font-family:Calibri,'Segoe UI',sans-serif;font-size:14.67px;line-height:22.79px;}
 .tn-canvas-imported-card .canvas-node-content .markdown-preview-view::-webkit-scrollbar {width:0;height:0;}

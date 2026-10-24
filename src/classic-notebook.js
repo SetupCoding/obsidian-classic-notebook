@@ -1646,6 +1646,7 @@ module.exports = class ClassicNotebook extends Plugin {
     setIcon(brand.createSpan('tn-book-icon'), 'book-open');
     const labels = brand.createDiv('tn-brand-labels'); labels.createSpan({ text: this.app.vault.getName() }); this.groupLabel = labels.createEl('small');
     brand.onclick = () => this.app.workspace.leftSplit.collapsed ? this.app.workspace.leftSplit.expand() : this.app.workspace.leftSplit.collapse();
+    this.mountNotebookVaultControls();
     this.backButton = this.tabBar.createEl('button', { cls: 'tn-back tn-icon-button', attr: { 'aria-label': 'Zurück zur Hauptebene', title: 'Zurück zur Hauptebene' } });
     setIcon(this.backButton, 'corner-up-left'); this.backButton.onclick = () => this.goBack();
     this.tabs = this.tabBar.createDiv('tn-tabs'); this.tabs.setAttribute('role', 'tablist'); this.tabs.setAttribute('aria-label', 'Notizbuch-Abschnitte');
@@ -1997,3 +1998,6 @@ Object.assign(module.exports.prototype, notebookLifecycleMethods);
 
 // @include notebook-settings
 Object.assign(module.exports.prototype, notebookSettingsMethods);
+
+// @include vault-controls
+Object.assign(module.exports.prototype, notebookVaultControlMethods);

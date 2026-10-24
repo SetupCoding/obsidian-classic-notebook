@@ -1,5 +1,9 @@
 # Beta validation and remaining work
 
+## 3.4.1 footer checks
+
+The browser suite exercises the actual bundle's native-footer relocation, preserved click handlers, keyboard activation, collapsed/expanded sidebar, hidden ribbon, narrow viewport, dark styling, repeated setup and unload restoration (including a temporarily detached native sidebar). Live application verification is recorded separately from these simulated Obsidian objects.
+
 ## 3.4.0 validation scope
 
 The packaged `main.js`, not only the source modules, is loaded by 18 Node test files. They exercise text formatting, five-level hierarchy, deletion/rename and stale targets, navigation/history, viewport persistence, exact search ranges, section ordering, native Canvas metadata, text links, import typography, settings and disable/re-enable cleanup. The companion GM plugin adds one standalone suite and two integration files using both real plugin bundles with synthetic notes.

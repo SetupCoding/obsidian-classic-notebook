@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.1 desktop beta
+
+- Keep Obsidian's native vault switcher, help and settings controls reachable at the bottom left when the left sidebar is collapsed, including with the ribbon hidden.
+- Reserve footer space instead of covering the editor. Restore the native sidebar placement when expanded and on plugin unload.
+- Add keyboard access, accessible labels and browser checks for narrow layouts, native actions and cleanup.
+
 ## 3.4.0 desktop beta
 
 - Publish the existing classic notebook interface as a separate MIT-licensed project.

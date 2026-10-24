@@ -1,7 +1,7 @@
 {
   "id": "classic-notebook",
   "name": "Classic Notebook",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "minAppVersion": "1.14.5",
   "description": "Classic notebook navigation with section tabs, section groups, nested pages and native Canvas pages.",
   "author": "Anton Schmidt",

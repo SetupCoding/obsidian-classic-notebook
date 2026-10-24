@@ -1,6 +1,6 @@
 {
   "name": "obsidian-classic-notebook",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "private": true,
   "description": "Classic notebook navigation with section tabs, section groups, nested pages and native Canvas pages.",
   "repository": {
@@ -12,7 +12,7 @@
     "test": "node build.cjs && node tests/run.cjs",
     "check": "node --check main.js",
     "lint": "eslint main.js",
-    "test:browser": "node tests/browser/appearance.cjs",
+    "test:browser": "node tests/browser/run.cjs",
     "vaults:plan": "node scripts/sync-vaults.cjs plan",
     "vaults:sync": "node scripts/sync-vaults.cjs sync",
     "vaults:check": "node scripts/sync-vaults.cjs check",
