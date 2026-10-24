@@ -87,3 +87,10 @@ Die separaten [GM Schnellbefehle](https://github.com/SetupCoding/obsidian-gm-sho
 ## Beta-Einstellungen
 
 Unter Einstellungen → Classic Notebook lassen sich das Format neuer Seiten (Canvas oder Markdown), die klassische Farbpalette, automatische Links und das Einklappen des Explorers beim Start einstellen. Ohne klassische Farbpalette verwendet die Oberfläche die Farben des aktiven Obsidian-Themes. Bestehende Seiten werden dadurch nicht konvertiert. Ein als Canvas-only konfiguriertes Notizbuch bleibt bei Canvas.
+
+
+## Gemeinsamer Stand für mehrere Vaults
+
+Der Quellcode liegt in den beiden Git-Repositories. `npm run vaults:plan` zeigt die Unterschiede zu den konfigurierten Vaults. `npm run vaults:sync` prüft und verteilt beide Plugins; `npm run vaults:check` kontrolliert die installierten Dateien. Unter Windows startet `Sync-Vaults.cmd` denselben Vorgang. Die Einrichtung steht in [VAULT-SYNC.md](VAULT-SYNC.md). Einstellungen, Notizen und Importprofile bleiben pro Vault erhalten.
+
+Die [Roadmap](ROADMAP.md) unterscheidet zwischen eingebauten Funktionen und den noch geplanten Verbesserungen aus dem [Fluent-Vergleich](FLUENT-COMPARISON.de.md).

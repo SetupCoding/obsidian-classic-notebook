@@ -12,7 +12,11 @@
     "test": "node build.cjs && node tests/run.cjs",
     "check": "node --check main.js",
     "lint": "eslint main.js",
-    "test:browser": "node tests/browser/appearance.cjs"
+    "test:browser": "node tests/browser/appearance.cjs",
+    "vaults:plan": "node scripts/sync-vaults.cjs plan",
+    "vaults:sync": "node scripts/sync-vaults.cjs sync",
+    "vaults:check": "node scripts/sync-vaults.cjs check",
+    "sync:shared": "node scripts/sync-vaults.cjs shared"
   },
   "engines": {
     "node": ">=22.13"

@@ -14,3 +14,5 @@ Research date: 2026-10-25. This comparison describes each project's published do
 Primary discovery source: [Obsidian's community plugin catalog](https://github.com/obsidianmd/obsidian-releases/blob/master/community-plugins.json). Fluent OneNote, Notebook Navigator and On2Od are already cataloged there. No implementation from these alternatives was copied into this repository.
 
 The case for publishing Classic Notebook is a preference for this particular combination of classic horizontal tabs, right-side page hierarchy and native Canvas pages. It is not a claim that notebook-style navigation is new.
+
+For a closer comparison of Fluent OneNote 1.0.11, see the [handling assessment](FLUENT-COMPARISON.de.md) and the [prioritized roadmap](ROADMAP.md). The isolated tests confirm important differences in Canvas support, section groups and drag nesting; they are not a live Obsidian performance benchmark.

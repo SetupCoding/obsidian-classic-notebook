@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    { "id": "classic-notebook", "repository": "." },
+    { "id": "gm-note-shortcuts", "repository": "../obsidian-gm-shortcuts" }
+  ],
+  "sharedModules": {
+    "sourcePlugin": "classic-notebook",
+    "targetPlugin": "gm-note-shortcuts",
+    "files": ["inline-text-formats.js", "color-edit.js"]
+  },
+  "vaults": [
+    { "name": "Notebook A", "path": "D:/Notes/Notebook A", "configDir": ".obsidian" },
+    { "name": "Notebook B", "path": "D:/Notes/Notebook B", "configDir": ".obsidian" }
+  ]
+}

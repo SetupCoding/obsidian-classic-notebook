@@ -14,6 +14,7 @@ reference-links.json
 spatial-import.json
 spatial-typography.json
 import-settings.json
+sync-vaults.local.json
 backups/
 *.one
 *.onepkg

@@ -1,9 +1,10 @@
 const fs = require('node:fs'), path = require('node:path');
+const readText = file => fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
 const root = __dirname, id = 'classic-notebook';
-const source = fs.readFileSync(path.join(root, 'src', id + '.js'), 'utf8').replace(/\/\/ @include ([a-z-]+)/g, (_, name) => fs.readFileSync(path.join(root, 'shared', name + '.js'), 'utf8'));
+const source = readText(path.join(root, 'src', id + '.js')).replace(/\/\/ @include ([a-z-]+)/g, (_, name) => readText(path.join(root, 'shared', name + '.js')));
 for (const [name, content] of [
   ['main.js', source],
-  ['styles.css', fs.readFileSync(path.join(root, 'src', id + '.css'))],
-  ['manifest.json', fs.readFileSync(path.join(root, 'src', id + '.manifest.json'))]
+  ['styles.css', readText(path.join(root, 'src', id + '.css'))],
+  ['manifest.json', readText(path.join(root, 'src', id + '.manifest.json'))]
 ]) fs.writeFileSync(path.join(root, name), content);
 console.log('Built ' + id);

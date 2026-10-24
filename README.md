@@ -61,6 +61,20 @@ Markdown and Canvas remain normal files. Notebook-specific creation dates, alias
 
 **This distribution is not a generic OneNote importer.** Optional legacy import-profile support exists for previously converted notebooks, but conversion scripts and source exports are not bundled. See the alternatives for dedicated import tools.
 
+## One source for several vaults
+
+Use the source repositories as the authoring location and deploy their tested runtime files with one command:
+
+```sh
+npm run vaults:plan
+npm run vaults:sync
+npm run vaults:check
+```
+
+First create the ignored local configuration from `sync-vaults.example.json`. The workflow validates both plugins, backs up changed installations and distributes only the three runtime files. Each vault keeps its own settings, hierarchy, notes and import profiles. On Windows, `Sync-Vaults.cmd` runs the same workflow from any current directory. [Setup and recovery](docs/VAULT-SYNC.md).
+
+The [handling roadmap](docs/ROADMAP.md) records pending work from the detailed [Fluent OneNote comparison](docs/FLUENT-COMPARISON.de.md). It distinguishes planned improvements from implemented features.
+
 ## Development
 
 Use Node.js 22.13+ or 24.x:
