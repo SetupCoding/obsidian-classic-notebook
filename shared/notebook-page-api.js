@@ -61,7 +61,7 @@ const notebookPageApi = {
   },
   async createNotebookPage({ section = '', title, parentPath = null, text = '', aliases = [], kind = 'canvas' }) {
     const name = String(title || '').trim().replace(/\.(?:md|canvas)$/i, '');
-    if (!name || /[\\/:*?"<>|\u0000-\u001f]/.test(name) || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name) || ['.', '..'].includes(name)) throw new Error('Bitte einen gültigen Seitennamen eingeben.');
+    if (!name || /[\\/:*?"<>|\u0000-\u001f]/.test(name) || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name) || ['.', '..'].includes(name)) throw new Error('Bitte einen gültigen Seitennamen eingeben.'); // eslint-disable-line no-control-regex -- Reject ASCII control characters in filenames.
     if (!['md', 'canvas'].includes(kind)) throw new Error('Unbekanntes Seitenformat.');
     section = section ? normalizePath(section) : '';
     const folder = section ? this.app.vault.getAbstractFileByPath(section) : this.app.vault.getRoot();

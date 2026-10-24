@@ -1,11 +1,11 @@
 'use strict';
-const { Plugin, ItemView, Modal, Notice, Menu, TFile, TFolder, normalizePath, setIcon, FileView, WorkspaceLeaf, MarkdownRenderer, Component, Scope, EditorSuggest, FuzzySuggestModal } = require('obsidian');
+const { Plugin, ItemView, Modal, Notice, Menu, TFile, TFolder, normalizePath, setIcon, FileView, WorkspaceLeaf, MarkdownRenderer, Component, Scope, EditorSuggest, FuzzySuggestModal, PluginSettingTab } = require('obsidian');
 const VIEW = 'classic-notebook-pages';
 const MAX_PAGE_DEPTH = 5;
 const LIGHT = ['#dce8c8', '#f6d2ae', '#ddc9b7', '#efc5df', '#f1bfc2', '#d9cae9', '#c4ddf1', '#d8dce4', '#d2e7b7', '#d5e3ee', '#f2e1ae'];
 const DARK = ['#3b513e', '#654e3c', '#554638', '#62475b', '#644448', '#51435f', '#3e5367', '#494d59', '#465a38', '#405566', '#62583b'];
 const COLOR_NAMES = ['Grün', 'Orange', 'Braun', 'Rosa', 'Rot', 'Violett', 'Blau', 'Grau', 'Hellgrün', 'Türkis', 'Gelb'];
-const DEFAULTS = { section: '', group: '', groups: [], order: [''], lastPages: {}, groupSections: {}, sectionColors: {}, pageLayouts: {}, collapsedPages: {}, pageMeta: {}, pagePositions: {}, pageSort: 'original', hiddenFolders: [], ribbonHidden: false };
+const DEFAULTS = { section: '', group: '', groups: [], order: [''], lastPages: {}, groupSections: {}, sectionColors: {}, pageLayouts: {}, collapsedPages: {}, pageMeta: {}, pagePositions: {}, pageSort: 'original', hiddenFolders: [], ribbonHidden: false, classicColors: true, newPageFormat: 'canvas', collapseExplorerOnStart: false };
 const parentPath = path => path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 const basename = path => path.split('/').at(-1);
 const readableColor = hex => {
@@ -161,7 +161,7 @@ class NotebookLinksModal extends Modal {
     const actions = this.contentEl.createDiv('tn-modal-actions');
     actions.createEl('button', { text: 'Zuordnung speichern', cls: 'mod-cta' }).onclick = () => {
       const alias = this.word.value.trim();
-      if (alias.length < 2 || /[\r\n\[\]<>]/.test(alias)) { new Notice('Bitte einen Namen oder Begriff mit mindestens zwei Zeichen eingeben.'); return; }
+      if (alias.length < 2 || /[\r\n[\]<>]/.test(alias)) { new Notice('Bitte einen Namen oder Begriff mit mindestens zwei Zeichen eingeben.'); return; }
       const file = p.resolveAutoLinkTarget(this.path.value.trim());
       if (!file) { new Notice('Bitte eine vorhandene Seite als Ziel auswählen.'); return; }
       p.data.autoLinkRules[autoLinkKey(alias)] = { alias, path: file.path.replace(/\.md$/, ''), sensitive: false };
@@ -492,8 +492,13 @@ const nativeNotebookMethods = {
     }
   },
   refreshCustomTextColors() {
-    if (!this.notebookTextColorStyle) { this.notebookTextColorStyle = document.createElement('style'); document.head.append(this.notebookTextColorStyle); }
-    this.notebookTextColorStyle.textContent = (this.data.customTextColors || []).filter(color => /^#[0-9A-F]{6}$/.test(color)).map(color => {
+    const doc = this.app.workspace.containerEl.ownerDocument;
+    if (!this.notebookTextColorSheet) {
+      this.notebookTextColorSheet = new doc.defaultView.CSSStyleSheet();
+      this.notebookTextColorDocument = doc;
+      doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, this.notebookTextColorSheet];
+    }
+    this.notebookTextColorSheet.replaceSync( (this.data.customTextColors || []).filter(color => /^#[0-9A-F]{6}$/.test(color)).map(color => {
       // Lift dark custom colours for the dark page background while retaining their hue.
       const rgb = color.slice(1).match(/../g).map(v => parseInt(v, 16));
       const light = value => { value /= 255; return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4; };
@@ -501,11 +506,16 @@ const nativeNotebookMethods = {
       let values = rgb;
       for (let mix = 0; mix <= 1 && (lum(values) + .05) / (.015 + .05) < 4.5; mix += .025) values = rgb.map(v => Math.round(v + (255 - v) * mix));
       return `.theme-dark.classic-notebook .tn-import-format[data-tn-color="${color}"]{color:rgb(${values.join(',')})!important}`;
-    }).join('\n');
+    }).join('\n'));
   },
   unloadNativeNotebookPages() {
     this.notebookHeaderObserver?.disconnect(); window.cancelAnimationFrame(this.notebookHeaderFrame);
-    this.notebookTextColorStyle?.remove(); this.notebookSelection = null;
+    if (this.notebookTextColorSheet) {
+      const doc = this.notebookTextColorDocument;
+      doc.adoptedStyleSheets = doc.adoptedStyleSheets.filter(sheet => sheet !== this.notebookTextColorSheet);
+      this.notebookTextColorSheet = null; this.notebookTextColorDocument = null;
+    }
+    this.notebookSelection = null;
     for (const node of document.querySelectorAll('.tn-native-page-header,.tn-created-stamp')) node.remove();
     for (const node of document.querySelectorAll('.tn-dated-page')) node.classList.remove('tn-dated-page');
   }
@@ -595,7 +605,7 @@ function spatialParagraphSpacing(element, markdown, typography) {
 }
 
 function spatialNavigationTarget(text, state = {}) {
-  let offset, needle = '';
+  let offset, needle;
   const match = state.match, first = match?.matches?.[0];
   if (match?.content === text && first) {
     offset = first[0]; needle = text.slice(first[0], first[1]);
@@ -883,7 +893,7 @@ const spatialNotebookMethods = {
     this.registerView(SPATIAL_VIEW, leaf => new SpatialPageView(leaf, this));
     this.setupSpatialNavigation();
     this.registerEditorExtension(spatialMarkerExtension());
-    this.addCommand({ id: 'toggle-free-notebook-page', name: 'Gesamtansicht / Textansicht umschalten', hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'M' }], checkCallback: checking => {
+    this.addCommand({ id: 'toggle-free-notebook-page', name: 'Gesamtansicht / Textansicht umschalten', checkCallback: checking => {
       if (this.data.nativeCanvasOnly) return false;
       const file = this.app.workspace.getActiveFile();
       if (!file || file.extension !== 'md') return false;
@@ -940,7 +950,7 @@ const spatialNotebookMethods = {
       let result;
       try{result=original.call(this,state,location);}catch(error){if(plugin.notebookNavigationPending?.get(this)===revision)plugin.notebookNavigationPending.delete(this);throw error;}
       if(enabled&&this.app===plugin.app)Promise.resolve(result).then(()=>{
-        if(plugin.notebookNavigationRevisions.get(this)!==revision)return;
+        if(!enabled||plugin.notebookNavigationRevisions.get(this)!==revision)return;
         plugin.notebookNavigationPending.delete(this);
         if(state?.type!=='canvas')return;
         const view=this.view;if(view.file?.path!==state.state?.file)return;
@@ -951,10 +961,7 @@ const spatialNotebookMethods = {
         delete view.__notebookSearch;
         if(location?.match||anchor)view.__notebookSearch=anchor||location;
         else if(savedPosition)plugin.restoreNotebookCanvasCardPositions(view,savedPosition);
-        if(!view.__notebookEphemeralHook&&typeof view.setEphemeralState==='function'){
-          const originalEphemeral=view.setEphemeralState;view.__notebookEphemeralHook=true;
-          view.setEphemeralState=function(ephemeral){const target=plugin.canvasNotebookAnchorState?.(this,ephemeral);if(target)ephemeral={...ephemeral,...target};if(ephemeral?.match||ephemeral?.subpath)this.__notebookPositionToken=null;const result=originalEphemeral.call(this,ephemeral);if(enabled&&ephemeral?.match){const path=this.file?.path;window.requestAnimationFrame(()=>{if(this.file?.path===path)plugin.revealCanvasNotebookMatch(this,ephemeral);});}return result;};
-        }
+        plugin.hookNotebookEphemeralState(view, () => enabled);
         plugin.scheduleNotebookHeaders?.();
       },()=>{if(plugin.notebookNavigationPending.get(this)===revision)plugin.notebookNavigationPending.delete(this);});
       return result;
@@ -1034,7 +1041,7 @@ class NameModal extends Modal {
     const run = async () => {
       if (save.disabled) return;
       const value = input.value.trim();
-      if (!value || /[\\/:*?"<>|\u0000-\u001f]/.test(value) || value === '.' || value === '..' || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(value)) { new Notice('Bitte einen gültigen Namen ohne Sonderzeichen wie / oder : eingeben.'); return; }
+      if (!value || /[\\/:*?"<>|\u0000-\u001f]/.test(value) || value === '.' || value === '..' || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(value)) { new Notice('Bitte einen gültigen Namen ohne Sonderzeichen wie / oder : eingeben.'); return; } // eslint-disable-line no-control-regex -- Reject ASCII control characters in filenames.
       save.disabled = true;
       try { await this.submit(value); this.close(); }
       catch (error) { new Notice(error.message || 'Der Name konnte nicht gespeichert werden.'); save.disabled = false; }
@@ -1384,6 +1391,7 @@ module.exports = class ClassicNotebook extends Plugin {
     this.data.autoLinksEnabled ??= true;
     this.data.autoLinkRules = Object.assign({}, this.data.autoLinkRules);
     this.data.autoLinkMoves = [...(this.data.autoLinkMoves || [])];
+    this.setupNotebookSettings();
     await this.setupCanvasNotebook();
     await this.setupAutoLinks();
     await this.setupSpatialPages();
@@ -1444,13 +1452,12 @@ module.exports = class ClassicNotebook extends Plugin {
     });
   }
   onunload() {
-    this.rememberNotebookPagePositions();
+    try { this.rememberNotebookPagePositions(); } catch (error) { console.warn('Classic Notebook: Could not remember page positions on unload.', error); }
     this.unloadNativeNotebookPages();
     this.unloadAutoLinks();
     window.clearTimeout(this.refreshTimer);
     if (this.saveTimer) { window.clearTimeout(this.saveTimer); void this.saveData(this.data); }
-    this.tabBar?.remove(); document.body.removeClass('classic-notebook', 'cn-ribbon-hidden'); document.body.style.removeProperty('--tn-section');
-    this.app.workspace.detachLeavesOfType(VIEW);
+    this.tabBar?.remove(); document.body.removeClass('classic-notebook', 'cn-classic-colors', 'cn-ribbon-hidden'); document.body.style.removeProperty('--tn-section');
   }
   persist() { window.clearTimeout(this.saveTimer); this.saveTimer = window.setTimeout(() => this.saveData(this.data), 200); }
   scheduleRefresh() { window.clearTimeout(this.refreshTimer); this.refreshTimer = window.setTimeout(() => this.refresh(), 100); }
@@ -1627,6 +1634,7 @@ module.exports = class ClassicNotebook extends Plugin {
   changePageIndent(file, direction) { return this.commitPagePlan(this.sectionOf(file), this.pageIndentPlan(file, direction)); }
   mountTabs() {
     document.body.addClass('classic-notebook');
+    this.applyNotebookAppearance();
     const workspace = this.app.workspace.containerEl;
     const host = workspace.closest('.horizontal-main-container') || workspace;
     this.tabBar = document.createElement('div'); this.tabBar.className = 'tn-tab-bar'; host.parentElement.insertBefore(this.tabBar, host);
@@ -1858,7 +1866,7 @@ module.exports = class ClassicNotebook extends Plugin {
       this.refresh(); new Notice('„' + basename(section) + '“ wurde in den Vault-Papierkorb verschoben.');
     } finally { this.trashingSection = false; }
   }
-  newPage(parentFile = null, kind = 'canvas') {
+  newPage(parentFile = null, kind = this.notebookNewPageFormat()) {
     const section = parentFile ? this.sectionOf(parentFile) : this.data.section;
     if (this.isGroupOverview(section)) return this.newSection();
     const parent = parentFile && this.pageOutline(section).find(item => item.path === parentFile.path);
@@ -1983,3 +1991,9 @@ Object.assign(module.exports.prototype,notebookSectionTabMethods);
 
 // @include page-renaming
 Object.assign(module.exports.prototype,notebookPageRenameMethods);
+
+// @include notebook-lifecycle
+Object.assign(module.exports.prototype, notebookLifecycleMethods);
+
+// @include notebook-settings
+Object.assign(module.exports.prototype, notebookSettingsMethods);

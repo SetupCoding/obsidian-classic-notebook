@@ -27,7 +27,7 @@ function notebookCanvasVisibleSource(text,document){
     const size=(token[1]||token[3]).length;hide(token.index,token.index+size);hide(token.index+token[0].length-size,token.index+token[0].length);
   }
   for(const token of text.matchAll(/^\s*\|?[ \t]*:?-{3,}:?[ \t]*(?:\|[ \t]*:?-{3,}:?[ \t]*)+\|?[ \t]*$|^[ \t]*(?:> ?)*(?:(?:#{1,6}|[-+*]|\d+[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)|^\^[\w-]+[ \t]*$/gm))if(!inCode(token.index))hide(token.index,token.index+token[0].length);
-  for(const token of text.matchAll(/\\([\\`*{}\[\]()#+.!_>|~-])|\|/g))if(!inCode(token.index)&&!hidden[token.index]&&(token[1]||tables.some(([from,to])=>token.index>=from&&token.index<to)))hide(token.index,token.index+1);
+  for(const token of text.matchAll(/\\([\\`*{}[\]()#+.!_>|~-])|\|/g))if(!inCode(token.index)&&!hidden[token.index]&&(token[1]||tables.some(([from,to])=>token.index>=from&&token.index<to)))hide(token.index,token.index+1);
   const result={text:'',starts:[],ends:[]},characters=[],decoder=document.createElement('textarea');
   const append=(value,from,to)=>{for(let i=0;i<value.length;i++){
     const char=/\s/.test(value[i])?' ':value[i];

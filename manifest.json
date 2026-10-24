@@ -1,9 +1,10 @@
 {
   "id": "classic-notebook",
   "name": "Classic Notebook",
-  "version": "3.3.9",
-  "minAppVersion": "1.11.4",
-  "description": "Klassische Notizbuch-Oberfläche mit Abschnitten, Gruppen, Seitenhierarchie, nativen Canvas-Seiten und Anlegedatum.",
-  "author": "Lokal",
-  "isDesktopOnly": true
+  "version": "3.4.0",
+  "minAppVersion": "1.14.5",
+  "description": "Classic notebook navigation with section tabs, section groups, nested pages and native Canvas pages.",
+  "author": "Anton Schmidt",
+  "isDesktopOnly": true,
+  "authorUrl": "https://github.com/SetupCoding"
 }

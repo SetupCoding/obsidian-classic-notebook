@@ -1,0 +1,43 @@
+{
+  "nodes": [
+    {
+      "id": "main",
+      "type": "text",
+      "x": 24,
+      "y": 48,
+      "width": 650,
+      "height": 470,
+      "text": "# Plan the expedition\n\nDrag the reminder card beside the relevant paragraph. These are native Canvas text cards.\n\n## Before departure\n\n- Meet [[People/Mira|Mira]] at [[Places/The old bridge|the old bridge]].\n- Check the map.\n\n| Item | Where |\n| --- | --- |\n| Silver compass | Mira |\n| Wildflower tea | The market |\n\nSearch for **Wildflower** to try an exact table hit."
+    },
+    {
+      "id": "reminder",
+      "type": "text",
+      "x": 750,
+      "y": 215,
+      "width": 280,
+      "height": 170,
+      "text": "## GM reminder\n\nThe bridge keeper remembers last winter.\n\nAsk the players what they left behind."
+    }
+  ],
+  "edges": [],
+  "notebook": {
+    "version": 1,
+    "frontmatter": {
+      "title": "Welcome canvas",
+      "created": "2026-10-01T09:00:00Z",
+      "aliases": [
+        "Expedition plan"
+      ]
+    },
+    "cards": {
+      "main": {
+        "label": "Plan",
+        "appearance": "native"
+      },
+      "reminder": {
+        "label": "Reminder",
+        "appearance": "native"
+      }
+    }
+  }
+}

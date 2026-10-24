@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="570" viewBox="0 0 1120 570" role="img" aria-labelledby="title desc">
+<title id="title">Classic Notebook layout</title><desc id="desc">Illustration: section tabs on top, freely placed cards in the center, nested pages on the right.</desc>
+<rect width="1120" height="570" rx="12" fill="#202027"/>
+<g font-family="Segoe UI,Arial,sans-serif" fill="#e3dfe8">
+<path d="M0 60H1120" stroke="#94ae86" stroke-width="3"/><rect x="0" y="0" width="1120" height="58" fill="#292731"/>
+<text x="24" y="36" font-size="17">Demo notebook</text>
+<rect x="220" y="17" width="125" height="42" rx="7" fill="#3b513e"/><text x="245" y="43" font-size="15">Planning</text>
+<rect x="350" y="23" width="105" height="36" rx="7" fill="#654e3c"/><text x="377" y="46" font-size="15">People</text>
+<rect x="460" y="23" width="110" height="36" rx="7" fill="#3e5367"/><text x="488" y="46" font-size="15">Places</text>
+<text x="602" y="43" font-size="15">▣ Archive</text><text x="720" y="43" font-size="22">＋</text>
+<text x="37" y="110" font-size="27">Welcome canvas</text><path d="M37 125H525" stroke="#46404f"/><text x="37" y="146" fill="#b8aebe" font-size="12">Thursday, 1 October 2026　09:00</text>
+<rect x="35" y="184" width="495" height="327" rx="7" fill="#25242d" stroke="#635c6e"/>
+<text x="58" y="224" font-size="23" font-weight="600">Plan the expedition</text>
+<text x="58" y="268" font-size="16">Native Canvas cards. Your own arrangement.</text>
+<text x="58" y="316" font-size="19" font-weight="600">Before departure</text>
+<text x="70" y="351" font-size="16">• Meet Mira at the old bridge.</text><text x="70" y="382" font-size="16">• Check the map.</text>
+<text x="58" y="457" fill="#b8aebe" font-size="14">Move cards · Resize · Double-click to edit</text>
+<rect x="558" y="267" width="240" height="171" rx="7" fill="#302d37" stroke="#887a55"/>
+<text x="577" y="302" font-size="18" font-weight="600">GM reminder</text><text x="577" y="336" font-size="15">The bridge keeper</text><text x="577" y="362" font-size="15">remembers last winter.</text><text x="577" y="405" fill="#d2a4dc" font-size="15">Ask what they left behind.</text>
+<rect x="835" y="62" width="285" height="508" fill="#28262f"/><path d="M835 62V570" stroke="#46404f"/>
+<text x="857" y="94" font-size="16" font-weight="600">Planning</text><text x="857" y="132" fill="#b8aebe" font-size="14">＋ Add page</text>
+<rect x="848" y="153" width="258" height="38" rx="5" fill="#211f28" stroke="#46404f"/><text x="860" y="178" fill="#8e8398" font-size="14">Filter pages…</text>
+<rect x="848" y="210" width="258" height="40" fill="#38303f"/><rect x="848" y="210" width="3" height="40" fill="#d2a4dc"/>
+<text x="862" y="235" font-size="15">⌄ Welcome canvas</text><text x="886" y="276" font-size="15">Checklist</text><text x="886" y="315" font-size="15">Route notes</text><text x="862" y="362" font-size="15">Next session</text><text x="857" y="544" fill="#8e8398" font-size="12">Section tabs · Page hierarchy</text>
+</g></svg>

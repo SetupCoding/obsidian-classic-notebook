@@ -1,17 +1,31 @@
 {
   "name": "obsidian-classic-notebook",
-  "version": "3.3.9",
+  "version": "3.4.0",
   "private": true,
-  "description": "Klassische Notizbuch-Oberfläche mit Abschnitten, Gruppen, Seitenhierarchie, nativen Canvas-Seiten und Anlegedatum.",
+  "description": "Classic notebook navigation with section tabs, section groups, nested pages and native Canvas pages.",
   "repository": {
     "type": "git",
     "url": "https://github.com/SetupCoding/obsidian-classic-notebook.git"
   },
   "scripts": {
     "build": "node build.cjs",
-    "test": "node build.cjs && node tests/run.cjs"
+    "test": "node build.cjs && node tests/run.cjs",
+    "check": "node --check main.js",
+    "lint": "eslint main.js",
+    "test:browser": "node tests/browser/appearance.cjs"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
+  },
+  "license": "MIT",
+  "author": "Anton Schmidt",
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.13.0",
+    "eslint-plugin-obsidianmd": "0.4.2",
+    "playwright": "1.62.1"
+  },
+  "overrides": {
+    "moment": "2.31.0"
   }
 }

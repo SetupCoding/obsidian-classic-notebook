@@ -1,4 +1,10 @@
 body.classic-notebook {
+  --tn-bg:var(--background-primary); --tn-chrome:var(--background-secondary-alt); --tn-surface:var(--background-secondary); --tn-header:var(--background-secondary-alt);
+  --tn-text:var(--text-normal); --tn-muted:var(--text-muted); --tn-faint:var(--text-faint); --tn-border:var(--background-modifier-border);
+  --tn-hover:var(--background-modifier-hover); --tn-button:var(--interactive-normal); --tn-accent:var(--text-accent); --tn-tab-text:var(--text-normal);
+  --tn-input:var(--background-primary); --tn-selected:var(--background-primary); --tn-code:var(--code-background);
+}
+body.classic-notebook.cn-classic-colors {
   --tn-bg:#fff; --tn-chrome:#f7f6f8; --tn-surface:#f6f5f7; --tn-header:#f2f1f3;
   --tn-text:#29282d; --tn-muted:#68616f; --tn-faint:#938b9b; --tn-border:#ded9e3;
   --tn-hover:#eae6ef; --tn-button:#edebef; --tn-accent:#803d87; --tn-tab-text:#453b49;
@@ -6,13 +12,13 @@ body.classic-notebook {
   --font-interface:'Segoe UI',Calibri,sans-serif; --font-text:Calibri,'Segoe UI',sans-serif;
   --font-text-size:17px; --file-line-width:1080px;
 }
-body.theme-dark.classic-notebook {
+body.theme-dark.classic-notebook.cn-classic-colors {
   --tn-bg:#202027; --tn-chrome:#292731; --tn-surface:#28262f; --tn-header:#302d37;
   --tn-text:#e3dfe8; --tn-muted:#b8aebe; --tn-faint:#8e8398; --tn-border:#46404f;
   --tn-hover:#3a3344; --tn-button:#332e3d; --tn-accent:#d2a4dc; --tn-tab-text:#f0e7f3;
   --tn-input:#211f28; --tn-selected:#38303f; --tn-code:#2b2733;
 }
-body.classic-notebook {
+body.classic-notebook.cn-classic-colors {
   --background-primary:var(--tn-bg); --background-primary-alt:var(--tn-bg);
   --background-secondary:var(--tn-surface); --background-secondary-alt:var(--tn-header);
   --background-modifier-border:var(--tn-border); --background-modifier-hover:var(--tn-hover);

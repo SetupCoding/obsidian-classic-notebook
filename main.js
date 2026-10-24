@@ -1,11 +1,11 @@
 'use strict';
-const { Plugin, ItemView, Modal, Notice, Menu, TFile, TFolder, normalizePath, setIcon, FileView, WorkspaceLeaf, MarkdownRenderer, Component, Scope, EditorSuggest, FuzzySuggestModal } = require('obsidian');
+const { Plugin, ItemView, Modal, Notice, Menu, TFile, TFolder, normalizePath, setIcon, FileView, WorkspaceLeaf, MarkdownRenderer, Component, Scope, EditorSuggest, FuzzySuggestModal, PluginSettingTab } = require('obsidian');
 const VIEW = 'classic-notebook-pages';
 const MAX_PAGE_DEPTH = 5;
 const LIGHT = ['#dce8c8', '#f6d2ae', '#ddc9b7', '#efc5df', '#f1bfc2', '#d9cae9', '#c4ddf1', '#d8dce4', '#d2e7b7', '#d5e3ee', '#f2e1ae'];
 const DARK = ['#3b513e', '#654e3c', '#554638', '#62475b', '#644448', '#51435f', '#3e5367', '#494d59', '#465a38', '#405566', '#62583b'];
 const COLOR_NAMES = ['Grün', 'Orange', 'Braun', 'Rosa', 'Rot', 'Violett', 'Blau', 'Grau', 'Hellgrün', 'Türkis', 'Gelb'];
-const DEFAULTS = { section: '', group: '', groups: [], order: [''], lastPages: {}, groupSections: {}, sectionColors: {}, pageLayouts: {}, collapsedPages: {}, pageMeta: {}, pagePositions: {}, pageSort: 'original', hiddenFolders: [], ribbonHidden: false };
+const DEFAULTS = { section: '', group: '', groups: [], order: [''], lastPages: {}, groupSections: {}, sectionColors: {}, pageLayouts: {}, collapsedPages: {}, pageMeta: {}, pagePositions: {}, pageSort: 'original', hiddenFolders: [], ribbonHidden: false, classicColors: true, newPageFormat: 'canvas', collapseExplorerOnStart: false };
 const parentPath = path => path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 const basename = path => path.split('/').at(-1);
 const readableColor = hex => {
@@ -161,7 +161,7 @@ class NotebookLinksModal extends Modal {
     const actions = this.contentEl.createDiv('tn-modal-actions');
     actions.createEl('button', { text: 'Zuordnung speichern', cls: 'mod-cta' }).onclick = () => {
       const alias = this.word.value.trim();
-      if (alias.length < 2 || /[\r\n\[\]<>]/.test(alias)) { new Notice('Bitte einen Namen oder Begriff mit mindestens zwei Zeichen eingeben.'); return; }
+      if (alias.length < 2 || /[\r\n[\]<>]/.test(alias)) { new Notice('Bitte einen Namen oder Begriff mit mindestens zwei Zeichen eingeben.'); return; }
       const file = p.resolveAutoLinkTarget(this.path.value.trim());
       if (!file) { new Notice('Bitte eine vorhandene Seite als Ziel auswählen.'); return; }
       p.data.autoLinkRules[autoLinkKey(alias)] = { alias, path: file.path.replace(/\.md$/, ''), sensitive: false };
@@ -754,8 +754,13 @@ const nativeNotebookMethods = {
     }
   },
   refreshCustomTextColors() {
-    if (!this.notebookTextColorStyle) { this.notebookTextColorStyle = document.createElement('style'); document.head.append(this.notebookTextColorStyle); }
-    this.notebookTextColorStyle.textContent = (this.data.customTextColors || []).filter(color => /^#[0-9A-F]{6}$/.test(color)).map(color => {
+    const doc = this.app.workspace.containerEl.ownerDocument;
+    if (!this.notebookTextColorSheet) {
+      this.notebookTextColorSheet = new doc.defaultView.CSSStyleSheet();
+      this.notebookTextColorDocument = doc;
+      doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, this.notebookTextColorSheet];
+    }
+    this.notebookTextColorSheet.replaceSync( (this.data.customTextColors || []).filter(color => /^#[0-9A-F]{6}$/.test(color)).map(color => {
       // Lift dark custom colours for the dark page background while retaining their hue.
       const rgb = color.slice(1).match(/../g).map(v => parseInt(v, 16));
       const light = value => { value /= 255; return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4; };
@@ -763,11 +768,16 @@ const nativeNotebookMethods = {
       let values = rgb;
       for (let mix = 0; mix <= 1 && (lum(values) + .05) / (.015 + .05) < 4.5; mix += .025) values = rgb.map(v => Math.round(v + (255 - v) * mix));
       return `.theme-dark.classic-notebook .tn-import-format[data-tn-color="${color}"]{color:rgb(${values.join(',')})!important}`;
-    }).join('\n');
+    }).join('\n'));
   },
   unloadNativeNotebookPages() {
     this.notebookHeaderObserver?.disconnect(); window.cancelAnimationFrame(this.notebookHeaderFrame);
-    this.notebookTextColorStyle?.remove(); this.notebookSelection = null;
+    if (this.notebookTextColorSheet) {
+      const doc = this.notebookTextColorDocument;
+      doc.adoptedStyleSheets = doc.adoptedStyleSheets.filter(sheet => sheet !== this.notebookTextColorSheet);
+      this.notebookTextColorSheet = null; this.notebookTextColorDocument = null;
+    }
+    this.notebookSelection = null;
     for (const node of document.querySelectorAll('.tn-native-page-header,.tn-created-stamp')) node.remove();
     for (const node of document.querySelectorAll('.tn-dated-page')) node.classList.remove('tn-dated-page');
   }
@@ -857,7 +867,7 @@ function spatialParagraphSpacing(element, markdown, typography) {
 }
 
 function spatialNavigationTarget(text, state = {}) {
-  let offset, needle = '';
+  let offset, needle;
   const match = state.match, first = match?.matches?.[0];
   if (match?.content === text && first) {
     offset = first[0]; needle = text.slice(first[0], first[1]);
@@ -1145,7 +1155,7 @@ const spatialNotebookMethods = {
     this.registerView(SPATIAL_VIEW, leaf => new SpatialPageView(leaf, this));
     this.setupSpatialNavigation();
     this.registerEditorExtension(spatialMarkerExtension());
-    this.addCommand({ id: 'toggle-free-notebook-page', name: 'Gesamtansicht / Textansicht umschalten', hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'M' }], checkCallback: checking => {
+    this.addCommand({ id: 'toggle-free-notebook-page', name: 'Gesamtansicht / Textansicht umschalten', checkCallback: checking => {
       if (this.data.nativeCanvasOnly) return false;
       const file = this.app.workspace.getActiveFile();
       if (!file || file.extension !== 'md') return false;
@@ -1202,7 +1212,7 @@ const spatialNotebookMethods = {
       let result;
       try{result=original.call(this,state,location);}catch(error){if(plugin.notebookNavigationPending?.get(this)===revision)plugin.notebookNavigationPending.delete(this);throw error;}
       if(enabled&&this.app===plugin.app)Promise.resolve(result).then(()=>{
-        if(plugin.notebookNavigationRevisions.get(this)!==revision)return;
+        if(!enabled||plugin.notebookNavigationRevisions.get(this)!==revision)return;
         plugin.notebookNavigationPending.delete(this);
         if(state?.type!=='canvas')return;
         const view=this.view;if(view.file?.path!==state.state?.file)return;
@@ -1213,10 +1223,7 @@ const spatialNotebookMethods = {
         delete view.__notebookSearch;
         if(location?.match||anchor)view.__notebookSearch=anchor||location;
         else if(savedPosition)plugin.restoreNotebookCanvasCardPositions(view,savedPosition);
-        if(!view.__notebookEphemeralHook&&typeof view.setEphemeralState==='function'){
-          const originalEphemeral=view.setEphemeralState;view.__notebookEphemeralHook=true;
-          view.setEphemeralState=function(ephemeral){const target=plugin.canvasNotebookAnchorState?.(this,ephemeral);if(target)ephemeral={...ephemeral,...target};if(ephemeral?.match||ephemeral?.subpath)this.__notebookPositionToken=null;const result=originalEphemeral.call(this,ephemeral);if(enabled&&ephemeral?.match){const path=this.file?.path;window.requestAnimationFrame(()=>{if(this.file?.path===path)plugin.revealCanvasNotebookMatch(this,ephemeral);});}return result;};
-        }
+        plugin.hookNotebookEphemeralState(view, () => enabled);
         plugin.scheduleNotebookHeaders?.();
       },()=>{if(plugin.notebookNavigationPending.get(this)===revision)plugin.notebookNavigationPending.delete(this);});
       return result;
@@ -1296,7 +1303,7 @@ class NameModal extends Modal {
     const run = async () => {
       if (save.disabled) return;
       const value = input.value.trim();
-      if (!value || /[\\/:*?"<>|\u0000-\u001f]/.test(value) || value === '.' || value === '..' || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(value)) { new Notice('Bitte einen gültigen Namen ohne Sonderzeichen wie / oder : eingeben.'); return; }
+      if (!value || /[\\/:*?"<>|\u0000-\u001f]/.test(value) || value === '.' || value === '..' || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(value)) { new Notice('Bitte einen gültigen Namen ohne Sonderzeichen wie / oder : eingeben.'); return; } // eslint-disable-line no-control-regex -- Reject ASCII control characters in filenames.
       save.disabled = true;
       try { await this.submit(value); this.close(); }
       catch (error) { new Notice(error.message || 'Der Name konnte nicht gespeichert werden.'); save.disabled = false; }
@@ -1646,6 +1653,7 @@ module.exports = class ClassicNotebook extends Plugin {
     this.data.autoLinksEnabled ??= true;
     this.data.autoLinkRules = Object.assign({}, this.data.autoLinkRules);
     this.data.autoLinkMoves = [...(this.data.autoLinkMoves || [])];
+    this.setupNotebookSettings();
     await this.setupCanvasNotebook();
     await this.setupAutoLinks();
     await this.setupSpatialPages();
@@ -1706,13 +1714,12 @@ module.exports = class ClassicNotebook extends Plugin {
     });
   }
   onunload() {
-    this.rememberNotebookPagePositions();
+    try { this.rememberNotebookPagePositions(); } catch (error) { console.warn('Classic Notebook: Could not remember page positions on unload.', error); }
     this.unloadNativeNotebookPages();
     this.unloadAutoLinks();
     window.clearTimeout(this.refreshTimer);
     if (this.saveTimer) { window.clearTimeout(this.saveTimer); void this.saveData(this.data); }
-    this.tabBar?.remove(); document.body.removeClass('classic-notebook', 'cn-ribbon-hidden'); document.body.style.removeProperty('--tn-section');
-    this.app.workspace.detachLeavesOfType(VIEW);
+    this.tabBar?.remove(); document.body.removeClass('classic-notebook', 'cn-classic-colors', 'cn-ribbon-hidden'); document.body.style.removeProperty('--tn-section');
   }
   persist() { window.clearTimeout(this.saveTimer); this.saveTimer = window.setTimeout(() => this.saveData(this.data), 200); }
   scheduleRefresh() { window.clearTimeout(this.refreshTimer); this.refreshTimer = window.setTimeout(() => this.refresh(), 100); }
@@ -1889,6 +1896,7 @@ module.exports = class ClassicNotebook extends Plugin {
   changePageIndent(file, direction) { return this.commitPagePlan(this.sectionOf(file), this.pageIndentPlan(file, direction)); }
   mountTabs() {
     document.body.addClass('classic-notebook');
+    this.applyNotebookAppearance();
     const workspace = this.app.workspace.containerEl;
     const host = workspace.closest('.horizontal-main-container') || workspace;
     this.tabBar = document.createElement('div'); this.tabBar.className = 'tn-tab-bar'; host.parentElement.insertBefore(this.tabBar, host);
@@ -2120,7 +2128,7 @@ module.exports = class ClassicNotebook extends Plugin {
       this.refresh(); new Notice('„' + basename(section) + '“ wurde in den Vault-Papierkorb verschoben.');
     } finally { this.trashingSection = false; }
   }
-  newPage(parentFile = null, kind = 'canvas') {
+  newPage(parentFile = null, kind = this.notebookNewPageFormat()) {
     const section = parentFile ? this.sectionOf(parentFile) : this.data.section;
     if (this.isGroupOverview(section)) return this.newSection();
     const parent = parentFile && this.pageOutline(section).find(item => item.path === parentFile.path);
@@ -2283,7 +2291,7 @@ const notebookPageApi = {
   },
   async createNotebookPage({ section = '', title, parentPath = null, text = '', aliases = [], kind = 'canvas' }) {
     const name = String(title || '').trim().replace(/\.(?:md|canvas)$/i, '');
-    if (!name || /[\\/:*?"<>|\u0000-\u001f]/.test(name) || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name) || ['.', '..'].includes(name)) throw new Error('Bitte einen gültigen Seitennamen eingeben.');
+    if (!name || /[\\/:*?"<>|\u0000-\u001f]/.test(name) || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name) || ['.', '..'].includes(name)) throw new Error('Bitte einen gültigen Seitennamen eingeben.'); // eslint-disable-line no-control-regex -- Reject ASCII control characters in filenames.
     if (!['md', 'canvas'].includes(kind)) throw new Error('Unbekanntes Seitenformat.');
     section = section ? normalizePath(section) : '';
     const folder = section ? this.app.vault.getAbstractFileByPath(section) : this.app.vault.getRoot();
@@ -2322,6 +2330,8 @@ function notebookNewCanvasPage({title,created,aliases=[],text='',emptyCard=true}
   return {nodes,edges:[],notebook:{version:1,frontmatter:{title,created,aliases},cards:nodes.length?{[id]:{label:'Notizen',appearance:'native'}}:{}}};
 }
 
+// Legacy conversion helper retained for compatibility tests.
+// eslint-disable-next-line no-unused-vars
 function notebookCanvasPage({text, layout, frontmatter, rewrite = value => value, drafts = {}, idFor = () => crypto.randomUUID().replaceAll('-', '').slice(0,16)}) {
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '');
   const blocks = spatialBlocks(text), nodes = [], cards = {}, used = new Set();
@@ -2369,7 +2379,7 @@ function notebookCanvasAnchorState(metadata, subpath, nodes) {
 class NotebookCanvasLinkSuggest extends (EditorSuggest || class {}) {
   constructor(plugin){super(plugin.app);this.plugin=plugin;}
   onTrigger(cursor,editor){
-    const before=editor.getLine(cursor.line).slice(0,cursor.ch),match=before.match(/\[\[([^\[\]#^|\n]*)$/);
+    const before=editor.getLine(cursor.line).slice(0,cursor.ch),match=before.match(/\[\[([^[\]#^|\n]*)$/);
     if(!match||!notebookCanvasAliasMatches(this.plugin,match[1]).length)return null;
     return {start:{line:cursor.line,ch:cursor.ch-match[1].length},end:cursor,query:match[1]};
   }
@@ -2698,7 +2708,7 @@ function notebookCanvasVisibleSource(text,document){
     const size=(token[1]||token[3]).length;hide(token.index,token.index+size);hide(token.index+token[0].length-size,token.index+token[0].length);
   }
   for(const token of text.matchAll(/^\s*\|?[ \t]*:?-{3,}:?[ \t]*(?:\|[ \t]*:?-{3,}:?[ \t]*)+\|?[ \t]*$|^[ \t]*(?:> ?)*(?:(?:#{1,6}|[-+*]|\d+[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)|^\^[\w-]+[ \t]*$/gm))if(!inCode(token.index))hide(token.index,token.index+token[0].length);
-  for(const token of text.matchAll(/\\([\\`*{}\[\]()#+.!_>|~-])|\|/g))if(!inCode(token.index)&&!hidden[token.index]&&(token[1]||tables.some(([from,to])=>token.index>=from&&token.index<to)))hide(token.index,token.index+1);
+  for(const token of text.matchAll(/\\([\\`*{}[\]()#+.!_>|~-])|\|/g))if(!inCode(token.index)&&!hidden[token.index]&&(token[1]||tables.some(([from,to])=>token.index>=from&&token.index<to)))hide(token.index,token.index+1);
   const result={text:'',starts:[],ends:[]},characters=[],decoder=document.createElement('textarea');
   const append=(value,from,to)=>{for(let i=0;i<value.length;i++){
     const char=/\s/.test(value[i])?' ':value[i];
@@ -3312,7 +3322,7 @@ Object.assign(module.exports.prototype,notebookSectionTabMethods);
 
 function notebookRenameName(value) {
   const name = String(value || '').trim().replace(/\.(?:md|canvas)$/i, '');
-  if (!name || /[\\/:*?"<>|\u0000-\u001f]/.test(name) || name === '.' || name === '..' || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name)) throw new Error('Bitte einen gültigen Seitennamen ohne Sonderzeichen wie / oder : eingeben.');
+  if (!name || /[\\/:*?"<>|\u0000-\u001f]/.test(name) || name === '.' || name === '..' || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name)) throw new Error('Bitte einen gültigen Seitennamen ohne Sonderzeichen wie / oder : eingeben.'); // eslint-disable-line no-control-regex -- Reject ASCII control characters in filenames.
   return name;
 }
 
@@ -3419,3 +3429,83 @@ const notebookPageRenameMethods = {
 };
 
 Object.assign(module.exports.prototype,notebookPageRenameMethods);
+
+// Install a reversible hook per Canvas view. Never keep an old plugin instance
+// alive after disable/reload, and never let optional targeting block core state.
+const notebookLifecycleMethods = {
+  hookNotebookEphemeralState(view, isEnabled) {
+    this.notebookEphemeralHooks ||= new WeakMap();
+    if (this.notebookEphemeralHooks.has(view) || typeof view.setEphemeralState !== 'function') return;
+    const plugin = this, original = view.setEphemeralState;
+    const owned = Object.hasOwn(view, 'setEphemeralState');
+    let active = true, revision = 0;
+    function wrapped(ephemeral) {
+      const currentRevision = ++revision;
+      if (!active || !isEnabled()) return original.call(this, ephemeral);
+      try {
+        const target = plugin.canvasNotebookAnchorState?.(this, ephemeral);
+        if (target) ephemeral = { ...ephemeral, ...target };
+      } catch (error) { console.warn('Classic Notebook: Could not resolve Canvas target.', error); }
+      if (ephemeral?.match || ephemeral?.subpath) this.__notebookPositionToken = null;
+      const result = original.call(this, ephemeral);
+      if (ephemeral?.match) {
+        const path = this.file?.path, targetView = this;
+        const win = this.containerEl?.ownerDocument?.defaultView;
+        win?.requestAnimationFrame(() => {
+          if (!active || !isEnabled() || revision !== currentRevision || targetView.file?.path !== path) return;
+          try { plugin.revealCanvasNotebookMatch(targetView, ephemeral); }
+          catch (error) { console.warn('Classic Notebook: Could not reveal Canvas target.', error); }
+        });
+      }
+      return result;
+    }
+    this.notebookEphemeralHooks.set(view, wrapped);
+    view.setEphemeralState = wrapped;
+    this.register(() => {
+      active = false;
+      revision++;
+      if (view.setEphemeralState === wrapped) {
+        if (owned) view.setEphemeralState = original;
+        else delete view.setEphemeralState;
+      }
+      plugin.notebookEphemeralHooks.delete(view);
+    });
+  }
+};
+
+Object.assign(module.exports.prototype, notebookLifecycleMethods);
+
+// Defined on setup so loading the bundle does not construct settings UI.
+const notebookSettingsMethods = {
+  setupNotebookSettings() {
+    const plugin = this;
+    class NotebookSettingsTab extends PluginSettingTab {
+      getSettingDefinitions() {
+        return [{ type: 'group', heading: 'Pages and appearance', items: [
+          { name: 'New page format', desc: 'Existing pages keep their format. Canvas-only notebooks always create Canvas pages.', control: { type: 'dropdown', key: 'newPageFormat', defaultValue: 'canvas', options: { canvas: 'Canvas', md: 'Markdown' } } },
+          { name: 'Classic colors', desc: 'Use the classic light/dark palette. Turn off to use your current theme colors.', control: { type: 'toggle', key: 'classicColors', defaultValue: true } },
+          { name: 'Automatic links', desc: 'Display matching page names and aliases as links. Note text is unchanged.', control: { type: 'toggle', key: 'autoLinksEnabled', defaultValue: true } },
+          { name: 'Collapse file explorer on startup', desc: 'Leave more room for the notebook page list.', control: { type: 'toggle', key: 'collapseExplorerOnStart', defaultValue: false } }
+        ] }, { name: 'Manage automatic links', desc: 'Review aliases and explicit link rules for this vault.', action: () => new NotebookLinksModal(plugin).open() }];
+      }
+      getControlValue(key) { return plugin.data[key]; }
+      async setControlValue(key, value) {
+        const valid = key === 'newPageFormat' ? ['canvas', 'md'].includes(value) : ['classicColors', 'autoLinksEnabled', 'collapseExplorerOnStart'].includes(key) && typeof value === 'boolean';
+        if (!valid) return;
+        plugin.data[key] = value;
+        if (key === 'classicColors') plugin.applyNotebookAppearance();
+        if (key === 'autoLinksEnabled') plugin.rebuildAutoLinks();
+        await plugin.saveData(plugin.data);
+      }
+    }
+    this.addSettingTab(new NotebookSettingsTab(this.app, this));
+  },
+  applyNotebookAppearance() {
+    this.app.workspace.containerEl.ownerDocument.body.classList.toggle('cn-classic-colors', this.data.classicColors !== false);
+  },
+  notebookNewPageFormat() {
+    return this.data.nativeCanvasOnly ? 'canvas' : this.data.newPageFormat === 'md' ? 'md' : 'canvas';
+  }
+};
+
+Object.assign(module.exports.prototype, notebookSettingsMethods);

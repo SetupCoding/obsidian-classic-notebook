@@ -30,7 +30,7 @@ const settle = () => new Promise(resolve=>setImmediate(resolve));
   assert(!Object.hasOwn(plugin.data.spatialLayouts[files[0].path],'preferText'),'an old source-view choice must not keep hiding margin notes');
   assert(persisted>0);
   const toggle = commands.find(command=>command.id==='toggle-free-notebook-page');
-  assert.deepEqual(JSON.parse(JSON.stringify(toggle.hotkeys)),[{modifiers:['Mod','Shift'],key:'M'}]);
+  assert.equal(toggle.hotkeys, undefined, 'users choose their own shortcuts');
   const leaf = new WorkspaceLeaf(app); leaves.push(leaf);
   const search = {match:{content:'Whole page including margin notes',matches:[[11,20]]},focus:true};
   const request = {type:'markdown',state:{file:files[0].path,mode:'preview'},active:true,pinned:true,group:'split',popstate:true};

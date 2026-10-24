@@ -1,6 +1,6 @@
 function notebookRenameName(value) {
   const name = String(value || '').trim().replace(/\.(?:md|canvas)$/i, '');
-  if (!name || /[\\/:*?"<>|\u0000-\u001f]/.test(name) || name === '.' || name === '..' || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name)) throw new Error('Bitte einen gültigen Seitennamen ohne Sonderzeichen wie / oder : eingeben.');
+  if (!name || /[\\/:*?"<>|\u0000-\u001f]/.test(name) || name === '.' || name === '..' || /[. ]$/.test(name) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(name)) throw new Error('Bitte einen gültigen Seitennamen ohne Sonderzeichen wie / oder : eingeben.'); // eslint-disable-line no-control-regex -- Reject ASCII control characters in filenames.
   return name;
 }
 

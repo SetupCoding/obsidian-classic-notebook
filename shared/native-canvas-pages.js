@@ -6,6 +6,8 @@ function notebookNewCanvasPage({title,created,aliases=[],text='',emptyCard=true}
   return {nodes,edges:[],notebook:{version:1,frontmatter:{title,created,aliases},cards:nodes.length?{[id]:{label:'Notizen',appearance:'native'}}:{}}};
 }
 
+// Legacy conversion helper retained for compatibility tests.
+// eslint-disable-next-line no-unused-vars
 function notebookCanvasPage({text, layout, frontmatter, rewrite = value => value, drafts = {}, idFor = () => crypto.randomUUID().replaceAll('-', '').slice(0,16)}) {
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, '');
   const blocks = spatialBlocks(text), nodes = [], cards = {}, used = new Set();
@@ -53,7 +55,7 @@ function notebookCanvasAnchorState(metadata, subpath, nodes) {
 class NotebookCanvasLinkSuggest extends (EditorSuggest || class {}) {
   constructor(plugin){super(plugin.app);this.plugin=plugin;}
   onTrigger(cursor,editor){
-    const before=editor.getLine(cursor.line).slice(0,cursor.ch),match=before.match(/\[\[([^\[\]#^|\n]*)$/);
+    const before=editor.getLine(cursor.line).slice(0,cursor.ch),match=before.match(/\[\[([^[\]#^|\n]*)$/);
     if(!match||!notebookCanvasAliasMatches(this.plugin,match[1]).length)return null;
     return {start:{line:cursor.line,ch:cursor.ch-match[1].length},end:cursor,query:match[1]};
   }
