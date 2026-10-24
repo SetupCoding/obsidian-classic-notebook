@@ -1,0 +1,24 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const context={module:{exports:{}},require:()=>({Plugin:class{},ItemView:class{},FileView:class{},Modal:class{}})};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../main.js'),'utf8'),context);
+const plugin=new context.module.exports();let saves=0,renders=0;
+plugin.data={group:'',section:'People',order:['Quest/A','Quest/B','','People','Story','Quest']};
+const available={'':['','People','Story','Quest'],Quest:['Quest/A','Quest/B']};
+plugin.sections=group=>{group??=plugin.data.group;const all=available[group];return [...plugin.data.order.filter(p=>all.includes(p)),...all.filter(p=>!plugin.data.order.includes(p))];};
+plugin.persist=()=>saves++;plugin.refresh=()=>renders++;
+assert(plugin.moveNotebookSection('Story','People'));
+assert.deepEqual(plugin.sections(),['','Story','People','Quest']);assert.equal(plugin.data.section,'People','sorting never opens another page');
+assert.deepEqual(plugin.sections('Quest'),['Quest/A','Quest/B'],'other groups retain their order');
+assert(plugin.moveNotebookSection('','Quest',true));assert.deepEqual(plugin.sections(),['Story','People','Quest',''],'the General tab with an empty path is sortable');
+assert(!plugin.moveNotebookSection('missing','People'));assert(!plugin.moveNotebookSection('People','People'));
+const before=JSON.stringify(plugin.data.order);assert(!plugin.moveNotebookSection('People','Story',false,'Quest'));assert.equal(JSON.stringify(plugin.data.order),before,'a stale drag from another group cannot alter order');
+plugin.data.group='Quest';assert(plugin.moveNotebookSection('Quest/A','Quest/B',true));assert.deepEqual(plugin.sections(),['Quest/B','Quest/A']);
+assert.deepEqual(plugin.sections(''),['Story','People','Quest','']);assert.equal(saves,renders);assert.equal(saves,3);
+const leaf=(type,name)=>({view:{getViewType:()=>type,save:async()=>events.push('save:'+name)},getViewState:()=>({type}),detach:()=>events.push('close:'+name)});
+const events=[],right=[leaf('canvas','Lena'),leaf('outline','Outline'),leaf('canvas','Mira')],root=[leaf('canvas','Main')];
+plugin.app={workspace:{rightSplit:right,iterateLeaves:(split,fn)=>split.forEach(fn)}};plugin.showPages=async()=>events.push('list');
+(async()=>{
+ assert.equal(await plugin.closeNotebookSidebarCanvases(),2);assert.deepEqual(events,['save:Lena','save:Mira','close:Lena','close:Mira','list']);assert.equal(root.length,1);
+ events.length=0;right[2].view.save=async()=>{throw Error('save failed');};await assert.rejects(()=>plugin.closeNotebookSidebarCanvases(),/save failed/);assert(!events.some(e=>e.startsWith('close:')),'failed saves do not close any tab');
+ console.log('PASS: section/group sorting in both directions including General, persistent and isolated sibling orders, stale/no-op guards, unchanged current page, and save-before-close sidebar cleanup without touching main tabs.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

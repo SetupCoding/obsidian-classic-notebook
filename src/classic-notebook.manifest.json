@@ -1,0 +1,9 @@
+{
+  "id": "classic-notebook",
+  "name": "Classic Notebook",
+  "version": "3.3.9",
+  "minAppVersion": "1.11.4",
+  "description": "Klassische Notizbuch-Oberfläche mit Abschnitten, Gruppen, Seitenhierarchie, nativen Canvas-Seiten und Anlegedatum.",
+  "author": "Lokal",
+  "isDesktopOnly": true
+}

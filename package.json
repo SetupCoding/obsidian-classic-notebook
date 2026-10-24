@@ -1,0 +1,17 @@
+{
+  "name": "obsidian-classic-notebook",
+  "version": "3.3.9",
+  "private": true,
+  "description": "Klassische Notizbuch-Oberfläche mit Abschnitten, Gruppen, Seitenhierarchie, nativen Canvas-Seiten und Anlegedatum.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SetupCoding/obsidian-classic-notebook.git"
+  },
+  "scripts": {
+    "build": "node build.cjs",
+    "test": "node build.cjs && node tests/run.cjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

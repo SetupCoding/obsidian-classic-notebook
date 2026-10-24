@@ -1,0 +1,41 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+class TFile{constructor(name){this.path=name;this.basename=name.split('/').at(-1).replace(/\.canvas$/,'');this.extension=name.split('.').at(-1);}}
+const obsidian={Plugin:class{},ItemView:class{},FileView:class{},Modal:class{},TFile};
+const context={module:{exports:{}},require:()=>obsidian};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../main.js'),'utf8')+'\nmodule.exports.api={notebookCanvasPage,notebookCanvasAliasMatches,NotebookCanvasLinkSuggest,notebookCanvasAnchorState};',context);
+const Notebook=context.module.exports,{notebookCanvasPage:convert,notebookCanvasAliasMatches:aliases,NotebookCanvasLinkSuggest:Suggest,notebookCanvasAnchorState:anchorState}=Notebook.api;
+const metrics={fontFamily:'Calibri',fontSizePt:14,lineHeightPt:17,paragraphs:[{text:'Original main',emptyBeforePt:34}]};
+const source='---\ntitle: Session\ncreated: "2001-02-03T04:05:00Z"\n---\n<!-- tn-box:main:start -->\nOriginal main\n\n**Bold** <span style="color:red">red</span> [[People/Person|Person]]\n<!-- tn-box:main:end -->\n\n<!-- tn-box:side:start -->\nA promise for a future scene.\n<!-- tn-box:side:end -->\n\n---\n[[Sources/Original.pdf#page=3|Original]]\n';
+const layout={boxes:[{id:'main',x:24,y:48,width:650,height:900,label:'Verlauf',typography:metrics},{id:'side',x:820,y:545,width:240,height:100,label:'Randnotiz 1'}]};
+let counter=0;const doc=convert({text:source,layout,frontmatter:{title:'Session',created:'2001-02-03T04:05:00Z',aliases:['Another title']},rewrite:text=>text.replace('People/Person|','People/Person.canvas|'),idFor:()=> 'extra'+(++counter)});
+assert.equal(doc.nodes.length,3,'each marked box and the outside source footer gets a native card');assert(doc.nodes.every(node=>node.type==='text'));
+assert.equal(doc.nodes[0].x,24);assert.equal(doc.nodes[0].y,48);assert.equal(doc.nodes[0].width,676);assert.equal(doc.nodes[1].x,820);assert.equal(doc.nodes[1].y,545);assert.equal(doc.nodes[1].width,240);
+assert(doc.nodes[0].text.includes('**Bold** <span style="color:red">red</span>'));assert(doc.nodes[0].text.includes('[[People/Person.canvas|Person]]'));assert(!doc.nodes.some(node=>node.text.includes('tn-box:')||node.text.includes('created:')));
+assert.equal(doc.notebook.cards.main.typography,metrics);assert.equal(doc.notebook.frontmatter.created,'2001-02-03T04:05:00Z');assert.equal(doc.notebook.frontmatter.aliases[0],'Another title');
+const draft=convert({text:source,layout,frontmatter:{},drafts:{side:{expected:'A promise for a future scene.',value:'A newer unsaved promise.'}},idFor:()=> 'draft'+(++counter)});assert.equal(draft.nodes.find(node=>node.id==='side').text,'A newer unsaved promise.');
+const conflict=convert({text:source,layout,frontmatter:{},drafts:{side:{expected:'An older different promise.',value:'The unsaved alternative.'}},idFor:()=> 'conflict'+(++counter)});assert.equal(conflict.nodes.find(node=>node.id==='side').text,'A promise for a future scene.');assert(conflict.nodes.some(node=>node.text==='The unsaved alternative.'),'a conflicting draft is preserved in its own recoverable text card');
+const plain=convert({text:'---\ntitle: Plain\n---\n# Notes\n\nText and an image ![[image.png]].',frontmatter:{},idFor:()=> 'plain'});assert.equal(plain.nodes.length,1);assert(plain.nodes[0].text.includes('![[image.png]]'));
+const orphan=convert({text:source,layout:{boxes:[layout.boxes[0]]},frontmatter:{},idFor:()=> 'orphan'+(++counter)});assert(orphan.nodes.some(node=>node.id==='side'),'unplaced source boxes are never dropped');
+const town=new TFile('Places/Town.canvas'),other=new TFile('People/Other.canvas'),plugin=new Notebook();plugin.data={pageMeta:{[town.path]:{aliases:['Sailor','Sailor Surname'],created:'original date'}},hiddenFolders:[],hiddenPages:[],groups:[]};plugin.app={vault:{getFiles:()=>[town,other]},metadataCache:{}};
+plugin.canvasNotebookMetadata=new Map([[town.path,{frontmatter:{title:'Town',aliases:['Sailor','Sailor Surname'],created:'original date'}}]]);
+assert.equal(aliases(plugin,'Sailor')[0].file,town);assert.equal(aliases(plugin,'Sailor')[0].alias,'Sailor');assert.equal(plugin.frontmatter(town).created,'original date');
+const suggest=new Suggest(plugin);let line='A [[Sailor]]',value='',cursor;const editor={getLine:()=>line,replaceRange:(text,start,end)=>{value=line.slice(0,start.ch)+text+line.slice(end.ch);},setCursor:position=>{cursor=position;}};
+const trigger=suggest.onTrigger({line:0,ch:10},editor);assert(trigger);suggest.context={...trigger,editor};suggest.selectSuggestion(aliases(plugin,'Sailor')[0]);assert.equal(value,'A [[Places/Town.canvas|Sailor]]','alias suggestions insert a real Canvas target and consume the existing closing brackets');assert(cursor.ch>10);
+plugin.data.hiddenPages=['Places/Hidden.md'];const hidden=new TFile('Places/Hidden.md');plugin.app.vault.getFiles=()=>[town,other,hidden];assert(!plugin.sourcePages('Places').includes(hidden),'shared backing files are not shown as separate notebook pages');
+console.log('PASS: native editable cards, exact note positions and typography, preserved emphasis/images/source footer, unsaved and conflicting drafts, orphan boxes, portable dates/aliases, native Canvas link completion, and hidden backing notes.');
+
+const anchorNode={id:'chapter',text:'First paragraph.\n\nA source paragraph.\n\n^source-1'};
+const anchorMetadata={anchors:{'^source-1':{nodeId:'chapter',offset:18,length:19},'Chapter title':{nodeId:'chapter',offset:0,length:16}}};
+const anchorNodes=new Map([[anchorNode.id,anchorNode]]);
+assert.equal(anchorState(anchorMetadata,'#^source-1',anchorNodes).match.nodeId,'chapter');
+assert.equal(anchorState(anchorMetadata,'#^source-1',anchorNodes).match.matches[0][0],18);
+assert.equal(anchorState(anchorMetadata,'#Chapter%20title',anchorNodes).match.matches[0][0],0);
+assert.equal(anchorState(anchorMetadata,'#missing',anchorNodes),null);
+assert.equal(anchorState(anchorMetadata,'#^source-1',new Map()),null,'deleted source cards are never recreated by anchor navigation');
+assert.equal(anchorState(anchorMetadata,null,anchorNodes),null);
+console.log('PASS: native Canvas source anchors, encoded headings, exact source offsets and safely missing/deleted destinations.');
+
+const fakeView={file:{path:town.path},canvas:{nodes:new Map(),canvasRect:{height:900}},__notebookInitialViewport:true,__notebookSearch:{match:{nodeId:'chapter'}}};
+let reveals=0,starts=0;plugin.register=()=>{};plugin.app.workspace={getLeavesOfType:()=>[{view:fakeView}]};plugin.canvasNotebookViews=new WeakMap();plugin.revealCanvasNotebookMatch=()=>reveals++;plugin.positionCanvasNotebookStart=()=>starts++;
+plugin.renderCanvasNotebookCards();plugin.renderCanvasNotebookCards();
+assert.equal(reveals,1);assert.equal(starts,0,'source navigation consumes the initial viewport request, so the next render cannot snap back to the page start');
+console.log('PASS: source navigation survives consecutive native Canvas render passes.');
