@@ -2,9 +2,9 @@
 
 A classic notebook interface for Obsidian: colored section tabs across the top, section groups, and a hierarchical page list on the right. Write on native Canvas pages or use ordinary Markdown notes.
 
-**Desktop beta 3.4.2 · MIT · Obsidian 1.14.5+**
+**Desktop beta 3.5.0 · MIT · Obsidian 1.14.5+**
 
-[Download the beta](https://github.com/SetupCoding/obsidian-classic-notebook/releases/tag/3.4.2) · [Deutsche Anleitung](docs/README.de.md) · [Alternatives](docs/ALTERNATIVES.md) · [Testing and limitations](docs/TESTING.md)
+[Download the beta](https://github.com/SetupCoding/obsidian-classic-notebook/releases/tag/3.5.0) · [Deutsche Anleitung](docs/README.de.md) · [Alternatives](docs/ALTERNATIVES.md) · [Testing and limitations](docs/TESTING.md)
 
 ![Layout illustration with top section tabs and a page hierarchy on the right](docs/images/layout.svg)
 
@@ -33,7 +33,7 @@ This plugin is **not yet listed in the Obsidian community directory**. Try it in
 3. Reload Obsidian and enable **Classic Notebook** under Community plugins.
 4. Run **Classic Notebook: Notizbuch anzeigen** from the command palette if the page list is not visible.
 
-Alternatively, add `SetupCoding/obsidian-classic-notebook` through [BRAT](https://github.com/TfTHacker/obsidian42-brat), selecting the `3.4.2` beta release if needed. Manual release installation is the directly validated path.
+Alternatively, add `SetupCoding/obsidian-classic-notebook` through [BRAT](https://github.com/TfTHacker/obsidian42-brat), selecting the `3.5.0` beta release if needed. Manual release installation is the directly validated path.
 
 ## Start a notebook
 

@@ -1,6 +1,6 @@
 # Classic Notebook
 
-Obsidian-Plugin mit einer klassischen Notizbuch-Oberfläche, inspiriert von OneNote. Aktueller Stand: **3.4.2**. Desktop-Beta für Obsidian ab 1.14.5. Die bestehende Oberfläche wurde unter Windows mit 1.14.5 verwendet; der Prüfstand der Beta steht in TESTING.md.
+Obsidian-Plugin mit einer klassischen Notizbuch-Oberfläche, inspiriert von OneNote. Aktueller Stand: **3.5.0**. Desktop-Beta für Obsidian ab 1.14.5. Die bestehende Oberfläche wurde unter Windows mit 1.14.5 verwendet; der Prüfstand der Beta steht in TESTING.md.
 
 Klassische Notizbuch-Oberfläche mit Abschnittsreitern oben und einer Seitenliste rechts. Unterstützt Abschnittsgruppen, Abschnittsfarben, eine Seitenhierarchie mit bis zu fünf Ebenen, Drag-and-drop und einklappbaren Unterseiten, native Canvas-Seiten, Anlegedatum, automatische Links und einen Hell/Dunkel-Schalter.
 
