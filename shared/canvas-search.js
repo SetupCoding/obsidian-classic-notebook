@@ -43,10 +43,11 @@ function notebookCanvasVisibleSource(text,document){
   result.text=characters.join('');return result;
 }
 
-function notebookCanvasExactRanges(node,match){
+// `byPair` returns one entry per requested pair (null when it is not rendered).
+function notebookCanvasExactRanges(node,match,byPair=false){
   const document=node.nodeEl?.ownerDocument,text=node.text;
   if(!document||typeof text!=='string'||match.content!=null&&match.content!==text)return [];
-  const renderer=node.child?.previewMode?.renderer,sections=renderer?.sections||[],groups=new Map(),result=[];
+  const renderer=node.child?.previewMode?.renderer,sections=renderer?.sections||[],groups=new Map(),result=[],paired=[];
   if(typeof renderer?.text==='string'&&renderer.text!==renderer.lastText)return [];
   const offset=position=>{
     if(Number.isFinite(position?.offset))return position.offset;
@@ -54,13 +55,13 @@ function notebookCanvasExactRanges(node,match){
     let from=0;for(let line=0;line<position.line;line++){const next=text.indexOf('\n',from);if(next<0)return text.length;from=next+1;}
     return from+(position.col||0);
   };
-  for(const pair of match.matches||[]){
+  for(const [pairIndex,pair] of (match.matches||[]).entries()){
     const [from,to]=pair;if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<=from||to>text.length)continue;
     const section=sections.find(section=>{const start=offset(section.start),end=offset(section.end);return start!=null&&end!=null&&from>=start&&from<=end;});
     const root=section?.el||node.nodeEl.querySelector('.markdown-preview-sizer');if(!root||root.isConnected===false)continue;
     const base=section?offset(section.start):0,end=section?Math.min(text.length,offset(section.end)+1):text.length;
     if(!groups.has(root))groups.set(root,{root,base,source:text.slice(base,end),pairs:[]});
-    groups.get(root).pairs.push([from-base,to-base]);
+    groups.get(root).pairs.push([from-base,to-base,pairIndex]);
   }
   for(const group of groups.values()){
     const source=notebookCanvasVisibleSource(group.source,document),pieces=[],walker=document.createTreeWalker(group.root,4);
@@ -80,7 +81,7 @@ function notebookCanvasExactRanges(node,match){
     for(const piece of pieces){piece.forward=source.text.indexOf(piece.text,cursor);if(piece.forward>=0)cursor=piece.forward+piece.text.length;}
     cursor=source.text.length;
     for(let index=pieces.length-1;index>=0;index--){const piece=pieces[index];piece.backward=source.text.lastIndexOf(piece.text,cursor-piece.text.length);if(piece.backward>=0)cursor=piece.backward;}
-    for(const [from,to] of group.pairs){
+    for(const [from,to,pairIndex] of group.pairs){
       const covered=[];
       for(const piece of pieces){
         if(piece.forward<0||piece.forward!==piece.backward)continue;
@@ -90,10 +91,10 @@ function notebookCanvasExactRanges(node,match){
       }
       if(!covered.length)continue;
       const first=covered[0],last=covered.at(-1),range=document.createRange();
-      range.setStart(first.piece.node,first.piece.starts[first.first]);range.setEnd(last.piece.node,last.piece.ends[last.last]);result.push(range);
+      range.setStart(first.piece.node,first.piece.starts[first.first]);range.setEnd(last.piece.node,last.piece.ends[last.last]);result.push(range);paired[pairIndex]=range;
     }
   }
-  return result;
+  return byPair?(match.matches||[]).map((_,index)=>paired[index]||null):result;
 }
 
 const notebookCanvasSearchMethods={

@@ -255,9 +255,10 @@ body.classic-notebook.cn-classic-colors {
 .tn-canvas-imported-card .markdown-preview-sizer img {max-width:100%;}
 .tn-canvas-card-label {font:11px 'Segoe UI',sans-serif;color:var(--text-muted);}
 
-/* The same content box and typography in native Canvas preview and editing. */
+/* The same content box and typography in native Canvas preview and editing.
+   Obsidian 1.14 edits in an iframe whose root carries the card classes. */
 .tn-canvas-consistent-card .canvas-node-content .markdown-preview-view,
-.tn-canvas-consistent-card .canvas-node-content .markdown-source-view.mod-cm6 .cm-scroller {
+.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-scroller {
   padding:16px!important;
   scrollbar-gutter:stable!important;
   font-family:var(--font-text);
@@ -268,20 +269,30 @@ body.classic-notebook.cn-classic-colors {
 .tn-canvas-consistent-card .canvas-node-content .markdown-preview-view { display:block!important; }
 .tn-canvas-consistent-card .canvas-node-content .markdown-preview-view::before,
 .tn-canvas-consistent-card .canvas-node-content .markdown-preview-view::after { display:none!important; }
+.tn-canvas-imported-card .markdown-source-view.mod-cm6 .cm-scroller {padding:10px 12px 15px!important;scrollbar-gutter:auto!important;scrollbar-width:none!important;font-family:Calibri,'Segoe UI',sans-serif;font-size:14.67px;line-height:22.79px;overflow-anchor:none;}
+.tn-canvas-imported-card .markdown-source-view.mod-cm6 .cm-scroller::-webkit-scrollbar {width:0;height:0;}
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-scroller::before,
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-scroller::after { display:none!important; }
+/* Measured list indents: the bullet takes the extra room so text starts where the preview starts it. */
+.markdown-source-view.mod-cm6 .cm-line.cn-canvas-aligned-line .cm-formatting-list { margin-inline-end:var(--cn-list-shift,0px); }
+/* Imported previews join paragraphs split by one blank line; two or more leave one line. */
+.tn-canvas-imported-card .markdown-source-view.mod-cm6.is-live-preview .cn-canvas-empty-line { height:var(--cn-imported-empty-space)!important; min-height:0!important; line-height:var(--cn-imported-empty-space)!important; padding-block:0!important; }
+.tn-canvas-imported-card .markdown-source-view.mod-cm6 .cm-content {font-family:inherit;font-size:inherit;line-height:inherit;}
+.tn-canvas-imported-card .markdown-source-view.mod-cm6 .cm-line {line-height:inherit;}
 .tn-canvas-consistent-card .markdown-preview-sizer,
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-sizer,
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-content,
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-line { max-width:none!important; }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-content { padding:0!important; }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-sizer,
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-content,
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-line { max-width:none!important; }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-content { padding:0!important; }
 .tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-line { line-height:var(--line-height-normal); }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 img.cm-widgetBuffer { vertical-align:bottom; }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-header { padding-top:0!important; }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-1 { line-height:var(--h1-line-height); }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-2 { line-height:var(--h2-line-height); }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-3 { line-height:var(--h3-line-height); }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-4 { line-height:var(--h4-line-height); }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-5 { line-height:var(--h5-line-height); }
-.tn-canvas-consistent-card .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-6 { line-height:var(--h6-line-height); }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 img.cm-widgetBuffer { vertical-align:bottom; }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6.is-live-preview .cm-line.HyperMD-header { padding-top:0!important; }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-1 { line-height:var(--h1-line-height); }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-2 { line-height:var(--h2-line-height); }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-3 { line-height:var(--h3-line-height); }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-4 { line-height:var(--h4-line-height); }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-5 { line-height:var(--h5-line-height); }
+:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-6 { line-height:var(--h6-line-height); }
 .tn-canvas-consistent-card .markdown-source-view.mod-cm6.is-live-preview .cn-canvas-empty-line {
   height:var(--cn-empty-space)!important;
   min-height:0!important;
@@ -297,6 +308,19 @@ body.classic-notebook.cn-classic-colors {
 }
 .tn-canvas-consistent-card .markdown-source-view.mod-cm6.is-live-preview .cm-formatting-list-ul { text-align:center; }
 .tn-canvas-consistent-card .markdown-source-view.mod-cm6.is-live-preview .cm-formatting-list-ol { text-align:end; }
+
+/* Notebook text cards can overlap like page containers; coloured cards keep their light tint. */
+.cn-transparent-cards .canvas-node:is(.tn-canvas-consistent-card,.tn-canvas-imported-card) .canvas-node-container { background-color:transparent; }
+.cn-transparent-cards .canvas-node:is(.tn-canvas-consistent-card,.tn-canvas-imported-card):not(.is-selected,.is-focused,.is-dragging) .canvas-node-container { box-shadow:none; }
+
+/* A text card that cannot grow shows all of its text past its edge instead of clipping it. */
+.canvas-node.cn-canvas-text-overflow:not(.is-editing) .canvas-node-container { contain:size layout style; overflow:visible; }
+.canvas-node.cn-canvas-text-overflow:not(.is-editing) .canvas-node-content,
+.canvas-node.cn-canvas-text-overflow:not(.is-editing) .canvas-node-content > .markdown-embed-content,
+.canvas-node.cn-canvas-text-overflow:not(.is-editing) .canvas-node-content .markdown-preview-view { overflow:visible!important; }
+.canvas-node.cn-canvas-text-overflow:not(.is-editing) .canvas-node-content { min-height:0; }
+/* The preview renders only what fits its own height, so it takes the height of its text. */
+.canvas-node.cn-canvas-text-overflow:not(.is-editing) .canvas-node-content .markdown-preview-view { height:auto; }
 .classic-notebook.cn-ribbon-hidden .workspace-ribbon.mod-left,.classic-notebook.cn-ribbon-hidden .workspace-ribbon.mod-primary { display:none!important; }
 
 /* Native preview flashes whole blocks, including complete tables. */

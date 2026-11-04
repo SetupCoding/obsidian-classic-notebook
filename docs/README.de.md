@@ -79,9 +79,9 @@ Build und Tests benötigen keine zusätzlich installierten npm-Pakete. Obsidian 
 
 Öffentliche Desktop-Beta unter MIT-Lizenz. Noch nicht im Obsidian-Community-Verzeichnis gelistet. Mindestversion und aktuelle Einschränkungen stehen in der englischen README und in docs/TESTING.md.
 
-## GM-Integration
+## Integration
 
-Die separaten [GM Schnellbefehle](https://github.com/SetupCoding/obsidian-gm-shortcuts) ergänzen Formatierung, Charakterseiten und TODOs. Classic Notebook stellt dafür `getNotebookPageParents`, `createNotebookPage` und `appendNotebookPageEmbed` bereit.
+Andere Plugins können über `getNotebookPageParents`, `createNotebookPage` und `appendNotebookPageEmbed` Seiten anlegen und einbetten.
 
 
 ## Beta-Einstellungen

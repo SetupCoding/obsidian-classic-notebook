@@ -20,8 +20,9 @@ A classic notebook interface for Obsidian: colored section tabs across the top, 
 - Exact text highlighting in supported Canvas text cards, including table cells. Complex embedded content can still require native Find.
 - A light/dark switch, ribbon toggle and a setting to use your current theme colors.
 - A persistent bottom-right vault switcher, help and settings footer, independent of sidebar and ribbon visibility.
+- Canvas text cards that grow with their text and push the cards below them down, show text that cannot fit instead of clipping it, and edit with the same text positions as in reading view. Card backgrounds are transparent by default so cards and images can overlap.
 
-No adventure, character list or link mapping is bundled. [GM Shortcuts](https://github.com/SetupCoding/obsidian-gm-shortcuts) is a separate, optional plugin.
+No adventure, character list or link mapping is bundled.
 
 ## Install the beta
 

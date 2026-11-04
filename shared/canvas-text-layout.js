@@ -14,7 +14,9 @@ function notebookCanvasLayoutLines(text){
     if(!lines[at].blank)continue;
     let end=at+1;while(end<lines.length&&lines[end].blank)end++;
     const heading=lines[end]?.heading&&!lines[at-1]?.heading,gap=heading?'--heading-spacing':'--p-spacing',count=end-at;
-    for(let index=at;index<end;index++)result.push({from:lines[index].from,class:'cn-canvas-empty-line',style:'--cn-empty-space:calc(var('+gap+') / '+count+')'});
+    // Imported previews keep the 22.79px OneNote line only for two or more blank lines.
+    const imported=count>=2?'22.79px':'0px';
+    for(let index=at;index<end;index++)result.push({from:lines[index].from,class:'cn-canvas-empty-line',style:'--cn-empty-space:calc(var('+gap+') / '+count+');--cn-imported-empty-space:calc('+imported+' / '+count+')'});
     at=end-1;
   }
   return result;

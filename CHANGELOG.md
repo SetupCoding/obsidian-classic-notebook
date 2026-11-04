@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.5.0 desktop beta
+
+- Canvas text cards grow while you type and fit their rendered text after editing, never below their size before editing. Cards below move with them and keep their distance; cards beside or deliberately overlapping stay. Resizing and saving use the native Canvas history. A manual resize ends automatic fitting.
+- Keep the caret visible when a growing card extends below the visible area.
+- Text that does not fit a card that cannot grow (read-only Canvas, untouched cards) now overflows visibly with all of its preview rendered, instead of being clipped or hidden behind a scrollbar. Opening a page never rewrites untouched cards.
+- Editing a card keeps text where reading view shows it. Obsidian 1.14 edits cards in an iframe that the plugin's card styles did not reach; editors now receive the card styles, the app's rem size and imported OneNote typography, and line spacing, paragraph fonts, list indents, rules and images are matched to the measured preview when editing starts.
+- New setting, on by default: transparent Canvas card backgrounds, so overlapping cards and images stay visible.
+- Resolve the Canvas card of an editor inside the 1.14 iframe. Text colors use the same lookup; their behavior in the iframe editor still needs a live check.
+
 ## 3.4.2 desktop beta
 
 - Move the native vault switcher, help and settings footer to the bottom right, including with the left sidebar expanded.

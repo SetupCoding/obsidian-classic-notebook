@@ -1,6 +1,6 @@
 {
   "name": "obsidian-classic-notebook",
-  "version": "3.4.2",
+  "version": "3.5.0",
   "private": true,
   "description": "Classic notebook navigation with section tabs, section groups, nested pages and native Canvas pages.",
   "repository": {

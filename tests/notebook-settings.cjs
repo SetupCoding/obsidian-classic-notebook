@@ -12,9 +12,13 @@ Object.assign(plugin, { addSettingTab(value) { tab = value; }, async saveData(da
 (async () => {
   plugin.setupNotebookSettings(); assert(tab);
   const controls = tab.getSettingDefinitions()[0].items.map(item => item.control);
-  assert.equal(controls.length, 4); assert.equal(tab.getControlValue('classicColors'), true);
+  assert.equal(controls.length, 5); assert.equal(tab.getControlValue('classicColors'), true);
   await tab.setControlValue('classicColors', false); assert(!classes.has('cn-classic-colors'));
   await tab.setControlValue('classicColors', true); assert(classes.has('cn-classic-colors'));
+  assert(classes.has('cn-transparent-cards'), 'transparent Canvas cards are on unless disabled');
+  await tab.setControlValue('transparentCanvasCards', false); assert(!classes.has('cn-transparent-cards')); assert.equal(saved.at(-1).transparentCanvasCards, false);
+  await tab.setControlValue('transparentCanvasCards', 'no'); assert.equal(plugin.data.transparentCanvasCards, false, 'invalid setting values are ignored');
+  await tab.setControlValue('transparentCanvasCards', true); assert(classes.has('cn-transparent-cards'));
   await tab.setControlValue('autoLinksEnabled', false); assert.equal(rebuilds, 1); assert.equal(saved.at(-1).autoLinksEnabled, false);
   await tab.setControlValue('newPageFormat', 'md'); assert.equal(plugin.notebookNewPageFormat(), 'md');
   plugin.newPage(); await modal.submit('A note'); assert.equal(created.at(-1).path, 'Notes/A note.md', 'normal Add Page uses the selected format');

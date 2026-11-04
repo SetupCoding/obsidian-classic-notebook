@@ -5,7 +5,7 @@ const MAX_PAGE_DEPTH = 5;
 const LIGHT = ['#dce8c8', '#f6d2ae', '#ddc9b7', '#efc5df', '#f1bfc2', '#d9cae9', '#c4ddf1', '#d8dce4', '#d2e7b7', '#d5e3ee', '#f2e1ae'];
 const DARK = ['#3b513e', '#654e3c', '#554638', '#62475b', '#644448', '#51435f', '#3e5367', '#494d59', '#465a38', '#405566', '#62583b'];
 const COLOR_NAMES = ['Grün', 'Orange', 'Braun', 'Rosa', 'Rot', 'Violett', 'Blau', 'Grau', 'Hellgrün', 'Türkis', 'Gelb'];
-const DEFAULTS = { section: '', group: '', groups: [], order: [''], lastPages: {}, groupSections: {}, sectionColors: {}, pageLayouts: {}, collapsedPages: {}, pageMeta: {}, pagePositions: {}, pageSort: 'original', hiddenFolders: [], ribbonHidden: false, classicColors: true, newPageFormat: 'canvas', collapseExplorerOnStart: false };
+const DEFAULTS = { section: '', group: '', groups: [], order: [''], lastPages: {}, groupSections: {}, sectionColors: {}, pageLayouts: {}, collapsedPages: {}, pageMeta: {}, pagePositions: {}, pageSort: 'original', hiddenFolders: [], ribbonHidden: false, classicColors: true, transparentCanvasCards: true, newPageFormat: 'canvas', collapseExplorerOnStart: false };
 const parentPath = path => path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 const basename = path => path.split('/').at(-1);
 const readableColor = hex => {
@@ -578,7 +578,9 @@ const nativeNotebookMethods = {
     for (const leaf of this.app.workspace.getLeavesOfType('canvas')) {
       const canvas = leaf.view.canvas;
       if (!canvas?.nodes?.values) continue;
-      for (const node of canvas.nodes.values()) if (node.nodeEl?.contains(dom) && typeof node.setText === 'function') return { canvas, node };
+      // Obsidian 1.14 edits cards in an iframe inside the card element.
+      const frame = dom?.ownerDocument?.defaultView?.frameElement;
+      for (const node of canvas.nodes.values()) if ((node.nodeEl?.contains(dom) || (frame && node.nodeEl?.contains(frame))) && typeof node.setText === 'function') return { canvas, node };
     }
     return null;
   },
@@ -1658,11 +1660,13 @@ module.exports = class ClassicNotebook extends Plugin {
     await this.setupAutoLinks();
     await this.setupSpatialPages();
     this.setupNativeNotebookPages();
+    this.setupCanvasAutoHeight();
     this.setupNotebookTextLinks();
     this.initializeNotebookTextSwatches();
     this.refreshCustomTextColors();
     this.registerEditorExtension(notebookImportedFormatExtension());
     this.registerEditorExtension(notebookCanvasLayoutExtension());
+    this.setupCanvasEditParity();
     this.registerView(VIEW, leaf => new PagesView(leaf, this));
     for (const [type, role] of Object.entries(this.data.legacyViewTypes || {})) {
       if (type !== VIEW && type !== SPATIAL_VIEW && ['pages', 'spatial'].includes(role)) this.registerView(type, leaf => role === 'pages' ? new PagesView(leaf, this) : new SpatialPageView(leaf, this));
@@ -1719,7 +1723,7 @@ module.exports = class ClassicNotebook extends Plugin {
     this.unloadAutoLinks();
     window.clearTimeout(this.refreshTimer);
     if (this.saveTimer) { window.clearTimeout(this.saveTimer); void this.saveData(this.data); }
-    this.tabBar?.remove(); document.body.removeClass('classic-notebook', 'cn-classic-colors', 'cn-ribbon-hidden'); document.body.style.removeProperty('--tn-section');
+    this.tabBar?.remove(); document.body.removeClass('classic-notebook', 'cn-classic-colors', 'cn-transparent-cards', 'cn-ribbon-hidden'); document.body.style.removeProperty('--tn-section');
   }
   persist() { window.clearTimeout(this.saveTimer); this.saveTimer = window.setTimeout(() => this.saveData(this.data), 200); }
   scheduleRefresh() { window.clearTimeout(this.refreshTimer); this.refreshTimer = window.setTimeout(() => this.refresh(), 100); }
@@ -2446,6 +2450,7 @@ const nativeCanvasPageMethods={
         if(pending)this.revealCanvasNotebookMatch(view,pending);
         else if(first&&initial!==false)this.positionCanvasNotebookStart(view);
       }
+      this.fitCanvasNotebookCards(view);
     }
   },
   trackCanvasNotebookViewport(view){
@@ -2725,10 +2730,11 @@ function notebookCanvasVisibleSource(text,document){
   result.text=characters.join('');return result;
 }
 
-function notebookCanvasExactRanges(node,match){
+// `byPair` returns one entry per requested pair (null when it is not rendered).
+function notebookCanvasExactRanges(node,match,byPair=false){
   const document=node.nodeEl?.ownerDocument,text=node.text;
   if(!document||typeof text!=='string'||match.content!=null&&match.content!==text)return [];
-  const renderer=node.child?.previewMode?.renderer,sections=renderer?.sections||[],groups=new Map(),result=[];
+  const renderer=node.child?.previewMode?.renderer,sections=renderer?.sections||[],groups=new Map(),result=[],paired=[];
   if(typeof renderer?.text==='string'&&renderer.text!==renderer.lastText)return [];
   const offset=position=>{
     if(Number.isFinite(position?.offset))return position.offset;
@@ -2736,13 +2742,13 @@ function notebookCanvasExactRanges(node,match){
     let from=0;for(let line=0;line<position.line;line++){const next=text.indexOf('\n',from);if(next<0)return text.length;from=next+1;}
     return from+(position.col||0);
   };
-  for(const pair of match.matches||[]){
+  for(const [pairIndex,pair] of (match.matches||[]).entries()){
     const [from,to]=pair;if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<=from||to>text.length)continue;
     const section=sections.find(section=>{const start=offset(section.start),end=offset(section.end);return start!=null&&end!=null&&from>=start&&from<=end;});
     const root=section?.el||node.nodeEl.querySelector('.markdown-preview-sizer');if(!root||root.isConnected===false)continue;
     const base=section?offset(section.start):0,end=section?Math.min(text.length,offset(section.end)+1):text.length;
     if(!groups.has(root))groups.set(root,{root,base,source:text.slice(base,end),pairs:[]});
-    groups.get(root).pairs.push([from-base,to-base]);
+    groups.get(root).pairs.push([from-base,to-base,pairIndex]);
   }
   for(const group of groups.values()){
     const source=notebookCanvasVisibleSource(group.source,document),pieces=[],walker=document.createTreeWalker(group.root,4);
@@ -2762,7 +2768,7 @@ function notebookCanvasExactRanges(node,match){
     for(const piece of pieces){piece.forward=source.text.indexOf(piece.text,cursor);if(piece.forward>=0)cursor=piece.forward+piece.text.length;}
     cursor=source.text.length;
     for(let index=pieces.length-1;index>=0;index--){const piece=pieces[index];piece.backward=source.text.lastIndexOf(piece.text,cursor-piece.text.length);if(piece.backward>=0)cursor=piece.backward;}
-    for(const [from,to] of group.pairs){
+    for(const [from,to,pairIndex] of group.pairs){
       const covered=[];
       for(const piece of pieces){
         if(piece.forward<0||piece.forward!==piece.backward)continue;
@@ -2772,10 +2778,10 @@ function notebookCanvasExactRanges(node,match){
       }
       if(!covered.length)continue;
       const first=covered[0],last=covered.at(-1),range=document.createRange();
-      range.setStart(first.piece.node,first.piece.starts[first.first]);range.setEnd(last.piece.node,last.piece.ends[last.last]);result.push(range);
+      range.setStart(first.piece.node,first.piece.starts[first.first]);range.setEnd(last.piece.node,last.piece.ends[last.last]);result.push(range);paired[pairIndex]=range;
     }
   }
-  return result;
+  return byPair?(match.matches||[]).map((_,index)=>paired[index]||null):result;
 }
 
 const notebookCanvasSearchMethods={
@@ -2842,7 +2848,9 @@ function notebookCanvasLayoutLines(text){
     if(!lines[at].blank)continue;
     let end=at+1;while(end<lines.length&&lines[end].blank)end++;
     const heading=lines[end]?.heading&&!lines[at-1]?.heading,gap=heading?'--heading-spacing':'--p-spacing',count=end-at;
-    for(let index=at;index<end;index++)result.push({from:lines[index].from,class:'cn-canvas-empty-line',style:'--cn-empty-space:calc(var('+gap+') / '+count+')'});
+    // Imported previews keep the 22.79px OneNote line only for two or more blank lines.
+    const imported=count>=2?'22.79px':'0px';
+    for(let index=at;index<end;index++)result.push({from:lines[index].from,class:'cn-canvas-empty-line',style:'--cn-empty-space:calc(var('+gap+') / '+count+');--cn-imported-empty-space:calc('+imported+' / '+count+')'});
     at=end-1;
   }
   return result;
@@ -2854,7 +2862,446 @@ function notebookCanvasLayoutExtension(){
   return StateField.define({create:build,update:(value,transaction)=>transaction.docChanged?build(transaction.state):value,provide:field=>EditorView.decorations.from(field)});
 }
 
+// Text cards fit what is written in them. Canvas keeps owning size, save and
+// history, exactly like its own fit-to-content double click on a card edge.
+// A card that cannot grow (read-only Canvas, unstable measurement) shows its
+// whole text past its edge instead of clipping it or hiding it in a scrollbar.
+const NOTEBOOK_CANVAS_GROW_WINDOW = 3000;
+const NOTEBOOK_CANVAS_OVERFLOW_CLASS = 'cn-canvas-text-overflow';
+
+// Obsidian 1.14 edits a card inside an iframe, so the editor is reached
+// through CodeMirror itself rather than through the card's own DOM.
+function notebookCanvasTextElement(node) {
+  const root = node?.nodeEl;
+  if (typeof root?.querySelector !== 'function') return null;
+  if (node.isEditing) return node.child?.editMode?.editor?.cm?.scrollDOM || root.querySelector('.canvas-node-content .cm-scroller');
+  return node.child?.previewMode?.renderer?.previewEl || root.querySelector('.canvas-node-content .markdown-preview-view');
+}
+
+function notebookEditorFrame(dom) {
+  const frame = dom?.ownerDocument?.defaultView?.frameElement;
+  return frame && frame.ownerDocument !== dom.ownerDocument ? frame : null;
+}
+
+// The space a card gives its text is the native container inside its border.
+// Its size is contained, so it stays stable while text overflows visibly.
+function notebookCanvasTextSpace(node, element) {
+  return node?.nodeEl?.querySelector?.('.canvas-node-container')?.clientHeight || element?.clientHeight || 0;
+}
+
+function notebookCanvasClipped(node) {
+  const element = notebookCanvasTextElement(node), space = notebookCanvasTextSpace(node, element);
+  return !!element?.isConnected && space > 0 && element.scrollHeight - space >= 1;
+}
+
+// Content is measured at a 1px box so percentage minimum heights (CodeMirror
+// content, preview spacers) cannot make a card grow with itself forever.
+// A negative result is unused space below the text.
+function notebookCanvasOverflow(node) {
+  const element = notebookCanvasTextElement(node), space = notebookCanvasTextSpace(node, element);
+  if (!element?.isConnected || !space) return 0;
+  const previous = element.style.height;
+  element.style.height = '1px';
+  const needed = element.scrollHeight;
+  element.style.height = previous;
+  return needed - space;
+}
+
+// Grows to the text, or shrinks back towards it, never below `floor`.
+function notebookFitCanvasCard(node, canvas, floor = 0) {
+  const settled = value => value < 1 && (value > -4 || node.height <= floor);
+  let overflow = notebookCanvasOverflow(node), changed = false;
+  if (settled(overflow)) return 'fit';
+  if (canvas?.readonly || typeof node.resize !== 'function') return overflow < 1 ? 'fit' : 'blocked';
+  for (let step = 0; step < 10 && !settled(overflow); step++) {
+    const height = node.height, next = Math.max(floor, Math.ceil(height + overflow));
+    if (next === height) break;
+    node.resize({ width: node.width, height: next });
+    node.render?.();
+    if (node.height === height) break;
+    changed = true;
+    const after = notebookCanvasOverflow(node);
+    if (after >= 1 && after >= overflow) { overflow = after; break; }
+    overflow = after;
+  }
+  if (changed) canvas.requestSave?.();
+  return overflow >= 1 ? 'blocked' : changed ? 'resized' : 'fit';
+}
+
+// Cards below a resized card keep their distance to it, like text below a
+// growing paragraph: every card entirely below its previous bottom edge that
+// overlaps it horizontally moves, and so does every card those push in turn.
+// Deliberately overlapping cards and groups stay where they are.
+function notebookShiftCanvasCardsBelow(canvas, node, bottom, delta) {
+  if (!delta || !canvas?.nodes) return 0;
+  const cards = [...canvas.nodes.values()].filter(other => other !== node && typeof other.moveAndResize === 'function' && other.getData?.().type !== 'group');
+  const moved = new Set(), queue = [{ left: node.x, right: node.x + node.width, bottom }];
+  while (queue.length) {
+    const area = queue.shift();
+    for (const other of cards) if (!moved.has(other) && other.y >= area.bottom - 1 && other.x < area.right && other.x + other.width > area.left) {
+      moved.add(other); queue.push({ left: other.x, right: other.x + other.width, bottom: other.y + other.height });
+    }
+  }
+  for (const other of moved) other.moveAndResize({ x: other.x, y: other.y + delta, width: other.width, height: other.height });
+  return moved.size;
+}
+
+// Canvas is moved by transforms, not scrolling, so CodeMirror cannot follow a
+// caret that a growing card pushes below the visible area. Coordinates inside
+// the editor iframe are unscaled Canvas units relative to the frame.
+function notebookRevealCanvasCaret(canvas, node, editor) {
+  if (typeof canvas?.panIntoView !== 'function' || typeof node.nodeEl?.getBoundingClientRect !== 'function') return;
+  const caret = editor?.coordsAtPos?.(editor.state.selection.main.head), box = node.nodeEl.getBoundingClientRect(), scale = canvas.scale || 1;
+  if (!caret || !box) return;
+  const frame = notebookEditorFrame(editor.dom), origin = frame?.getBoundingClientRect();
+  const left = frame ? (origin.left - box.left) / scale + caret.left : (caret.left - box.left) / scale;
+  const top = frame ? (origin.top - box.top) / scale + caret.top : (caret.top - box.top) / scale;
+  const bottom = top + (caret.bottom - caret.top) / (frame ? 1 : scale);
+  canvas.panIntoView({ minX: node.x + left, minY: node.y + top, maxX: node.x + left + 1, maxY: node.y + bottom });
+}
+
+function notebookCanvasEditorHost(dom) {
+  return dom?.closest?.('.canvas-node') || notebookEditorFrame(dom)?.closest?.('.canvas-node') || null;
+}
+
+function notebookCanvasAutoHeightExtension(plugin) {
+  const { EditorView } = require('@codemirror/view');
+  return EditorView.updateListener.of(update => {
+    if (!update.docChanged && !update.geometryChanged && !update.heightChanged) return;
+    if (!notebookCanvasEditorHost(update.view.dom)) return;
+    plugin.onCanvasCardEditorUpdate(update.view, update.docChanged);
+  });
+}
+
+const notebookCanvasAutoHeightMethods = {
+  setupCanvasAutoHeight() {
+    this.canvasCardChanges = new WeakMap(); this.canvasCardsUnstable = new WeakSet(); this.canvasCardFits = new Map();
+    this.registerEditorExtension(notebookCanvasAutoHeightExtension(this));
+    this.canvasCardObserved = new Map(); this.canvasCardObservers = new Map();
+    this.register(() => {
+      window.cancelAnimationFrame(this.canvasCardFitFrame); this.canvasCardFitFrame = 0; this.canvasCardFits.clear();
+      for (const observer of this.canvasCardObservers.values()) observer.disconnect();
+      this.canvasCardObservers.clear(); this.canvasCardObserved.clear();
+      for (const leaf of this.app.workspace.getLeavesOfType('canvas')) for (const element of leaf.view.contentEl?.querySelectorAll('.' + NOTEBOOK_CANVAS_OVERFLOW_CLASS) || []) element.classList.remove(NOTEBOOK_CANVAS_OVERFLOW_CLASS);
+    });
+  },
+  canvasNotebookManaged(view) {
+    const path = view?.file?.path;
+    return view?.file?.extension === 'canvas' && (!!this.canvasNotebookMetadata?.has(path) || !!this.data.pageMeta?.[path]);
+  },
+  canvasViewFor(canvas) {
+    return canvas?.view?.canvas === canvas ? canvas.view : this.app.workspace.getLeavesOfType('canvas').map(leaf => leaf.view).find(view => view.canvas === canvas);
+  },
+  // `base` is the card height when writing started: the card never fits below it.
+  // A size change made outside this module (manual resize, undo) starts a new base.
+  onCanvasCardEditorUpdate(editor, changed) {
+    const found = this.canvasNodeForEditor(editor.dom);
+    if (!found || !this.canvasNotebookManaged(this.canvasViewFor(found.canvas))) return;
+    const marks = this.canvasCardChanges ||= new WeakMap(), node = found.node, mark = marks.get(node);
+    if (changed) {
+      if (!mark || mark.height !== node.height) marks.set(node, { time: Date.now(), base: node.height, height: node.height });
+      else mark.time = Date.now();
+    } else if (!this.canvasCardRecentlyChanged(node)) return;
+    (this.canvasCardFits ||= new Map()).set(node, { canvas: found.canvas, editor });
+    if (this.canvasCardFitFrame) return;
+    this.canvasCardFitFrame = window.requestAnimationFrame(() => {
+      this.canvasCardFitFrame = 0;
+      const pending = [...this.canvasCardFits]; this.canvasCardFits.clear();
+      for (const [card, { canvas, editor: view }] of pending) if (canvas.nodes?.get(card.id) === card) this.fitCanvasNotebookCard(canvas, card, { fit: true, editor: view });
+    });
+  },
+  canvasCardRecentlyChanged(node) {
+    const mark = this.canvasCardChanges?.get(node);
+    return !!mark && Date.now() - mark.time <= NOTEBOOK_CANVAS_GROW_WINDOW && mark.height === node.height;
+  },
+  fitCanvasNotebookCards(view) {
+    const canvas = view?.canvas;
+    if (!canvas?.nodes || !this.canvasNotebookManaged(view)) return;
+    for (const [node, entry] of this.canvasCardObserved || []) if (!entry.preview.isConnected) this.unobserveCanvasCard(node, entry);
+    for (const node of canvas.nodes.values()) {
+      if (typeof node.text !== 'string' || !node.nodeEl?.classList) continue;
+      this.observeCanvasCard(node);
+      if (!node.isEditing) this.fitCanvasNotebookCard(canvas, node, { fit: this.canvasCardRecentlyChanged(node) });
+    }
+  },
+  // The preview renders lazily and loads images and fonts later. Those change
+  // sizes, not DOM structure, so the page observer would not notice them.
+  observeCanvasCard(node) {
+    const preview = node.child?.previewMode?.renderer?.previewEl, sizer = preview?.querySelector?.('.markdown-preview-sizer'), host = preview?.ownerDocument?.defaultView;
+    if (!sizer || !preview.isConnected || !host?.ResizeObserver || !this.canvasCardObserved) return;
+    const current = this.canvasCardObserved.get(node);
+    if (current?.preview === preview && current.sizer === sizer) return;
+    if (current) this.unobserveCanvasCard(node, current);
+    let observer = this.canvasCardObservers.get(host);
+    if (!observer) { observer = new host.ResizeObserver(() => this.scheduleNotebookHeaders()); this.canvasCardObservers.set(host, observer); }
+    observer.observe(preview); observer.observe(sizer);
+    this.canvasCardObserved.set(node, { preview, sizer, observer });
+  },
+  unobserveCanvasCard(node, entry) {
+    entry.observer.unobserve(entry.preview); entry.observer.unobserve(entry.sizer);
+    this.canvasCardObserved.delete(node);
+  },
+  fitCanvasNotebookCard(canvas, node, { fit = false, editor = null } = {}) {
+    const mark = this.canvasCardChanges?.get(node);
+    let result;
+    if (fit && mark && !this.canvasCardsUnstable?.has(node)) {
+      const height = node.height;
+      result = notebookFitCanvasCard(node, canvas, mark.base);
+      if (result === 'resized' || (result === 'blocked' && node.height !== height)) {
+        if (notebookShiftCanvasCardsBelow(canvas, node, node.y + height, node.height - height)) canvas.requestSave?.();
+      }
+      if (result === 'resized') { mark.height = node.height; if (editor) notebookRevealCanvasCaret(canvas, node, editor); }
+      else if (result === 'blocked' && !canvas.readonly) (this.canvasCardsUnstable ||= new WeakSet()).add(node);
+    } else result = notebookCanvasClipped(node) ? 'blocked' : 'fit';
+    const classes = node.nodeEl?.classList, blocked = result === 'blocked';
+    if (classes) {
+      const before = classes.contains?.(NOTEBOOK_CANVAS_OVERFLOW_CLASS);
+      classes.toggle(NOTEBOOK_CANVAS_OVERFLOW_CLASS, blocked);
+      // The preview renders only what fits its own height; let it render the overflow too.
+      if (before !== undefined && before !== blocked && !node.isEditing) node.child?.previewMode?.renderer?.onResize?.();
+    }
+    return result;
+  }
+};
+
+// Editing a card must not move its text. Obsidian 1.14 edits a card inside an
+// iframe, where the card element is no ancestor of the editor, so the iframe
+// root receives the card's classes and typography that the preview uses.
+// Spacing that the editor cannot express with the shared rules (heading and
+// list margins, imported OneNote paragraph spacing) is measured in the preview
+// when editing starts and added in front of the matching editor lines.
+const NOTEBOOK_CANVAS_CARD_CLASSES = ['tn-canvas-consistent-card', 'tn-canvas-imported-card'];
+const NOTEBOOK_CANVAS_ALIGN_PASSES = 8;
+const NOTEBOOK_CANVAS_BLOCK_ANCHOR = 'hr, img, .internal-embed, .media-embed, table';
+
+// Where each source line starts in the rendered preview: the top of its first
+// visible character in unscaled card pixels from the top of the text box.
+function notebookCanvasPreviewLines(node, scale = 1) {
+  const text = node?.text, preview = node?.child?.previewMode?.renderer?.previewEl;
+  if (typeof text !== 'string' || !preview?.isConnected) return null;
+  const visible = notebookCanvasVisibleSource(text, preview.ownerDocument), probes = [];
+  let from = 0, at = 0;
+  for (const [line, value] of text.split('\n').entries()) {
+    const to = from + value.length;
+    while (at < visible.starts.length && visible.starts[at] < from) at++;
+    let first = at;
+    while (first < visible.starts.length && visible.starts[first] < to && visible.text[first] === ' ') first++;
+    if (first < visible.starts.length && visible.starts[first] < to) probes.push({ line, offset: visible.starts[first], end: visible.ends[first] });
+    from = to + 1;
+  }
+  const ranges = notebookCanvasExactRanges(node, { matches: probes.map(probe => [probe.offset, probe.end]) }, true), base = preview.getBoundingClientRect(), measured = [];
+  const lines = text.split('\n'), view = preview.ownerDocument.defaultView;
+  probes.forEach((probe, index) => {
+    const range = ranges[index], rect = range?.getClientRects?.()[0];
+    if (!rect) return;
+    // Imported paragraphs carry their own OneNote size and line height. Headings
+    // keep their theme sizes, which are the same in both modes.
+    const element = range.startContainer.parentElement, style = element && view.getComputedStyle(element);
+    const font = style && !/^ {0,3}#{1,6}\s/.test(lines[probe.line]) ? 'font-family:' + style.fontFamily + ';font-size:' + style.fontSize + ';line-height:' + style.lineHeight : '';
+    const list = /^\s*(?:[-*+]|\d+[.)])\s/.test(lines[probe.line]);
+    measured.push({ ...probe, font, list, left: (rect.left - base.left) / scale, top: (rect.top - base.top) / scale + preview.scrollTop });
+  });
+  // Lines without text (rules, images, embeds) are anchored by their rendered block.
+  const known = new Set(measured.map(probe => probe.line)), starts = [0];
+  for (let at = text.indexOf('\n'); at >= 0; at = text.indexOf('\n', at + 1)) starts.push(at + 1);
+  const lineOf = position => Number.isFinite(position?.line) ? position.line : Number.isFinite(position?.offset) ? starts.filter(start => start <= position.offset).length - 1 : null;
+  for (const section of node.child?.previewMode?.renderer?.sections || []) {
+    const line = lineOf(section.start);
+    if (line == null || known.has(line) || !lines[line]?.trim() || !section.el?.isConnected) continue;
+    const element = section.el.querySelector(NOTEBOOK_CANVAS_BLOCK_ANCHOR) || section.el.firstElementChild || section.el, rect = element.getBoundingClientRect();
+    if (!rect.height) continue;
+    known.add(line); measured.push({ line, offset: starts[line], block: true, font: '', list: false, top: (rect.top - base.top) / scale + preview.scrollTop });
+  }
+  measured.sort((a, b) => a.line - b.line);
+  return measured.length ? { text, probes: measured } : null;
+}
+
+function notebookCanvasEditorLineTops(view, probes) {
+  const scroller = view.scrollDOM, box = scroller.getBoundingClientRect(), scale = view.scaleY || 1, tops = new Map(), lefts = new Map(), indents = new Map(), heights = new Map(), doc = view.state.doc;
+  // Lines without text (rules, widgets) resolve to the content element plus a child index.
+  const lineElement = number => {
+    if (number + 1 > doc.lines) return null;
+    const { node, offset } = view.domAtPos(doc.line(number + 1).from), target = node === view.contentDOM ? node.childNodes[offset] : node;
+    const element = target?.nodeType === 1 ? target : target?.parentElement;
+    return element?.closest?.('.cm-line') || null;
+  };
+  for (const probe of probes) {
+    if (probe.block) {
+      const line = lineElement(probe.line), anchor = line && (line.querySelector(NOTEBOOK_CANVAS_BLOCK_ANCHOR) || line), rect = anchor?.getBoundingClientRect();
+      if (rect?.height) tops.set(probe.line, (rect.top - box.top) / scale + scroller.scrollTop);
+      continue;
+    }
+    const caret = probe.offset <= doc.length ? view.coordsAtPos(probe.offset, 1) : null;
+    if (!caret) continue;
+    tops.set(probe.line, (caret.top - box.top) / scale + scroller.scrollTop);
+    lefts.set(probe.line, (caret.left - box.left) / scale);
+    const line = probe.list && lineElement(probe.line);
+    if (line) indents.set(probe.line, parseFloat(view.dom.ownerDocument.defaultView.getComputedStyle(line).paddingInlineStart) || 0);
+  }
+  for (let number = 1; number <= doc.lines; number++) {
+    const line = doc.line(number);
+    if (!line.text.trim()) heights.set(number - 1, view.lineBlockAt(line.from).height);
+  }
+  return { tops, lefts, indents, heights };
+}
+
+// List text starts where the preview starts it, on its first and wrapped lines.
+// `base` keeps the editor's own hanging indent before any shift was added.
+function notebookCanvasListShift(probes, lefts, indents, current = { shift: new Map(), base: new Map() }) {
+  const shift = new Map(current.shift), base = new Map(current.base);
+  let changed = false;
+  for (const probe of probes) {
+    if (!probe.list || !lefts.has(probe.line) || !indents.has(probe.line)) continue;
+    const before = shift.get(probe.line) || 0;
+    if (!base.has(probe.line)) base.set(probe.line, indents.get(probe.line) - before);
+    const delta = probe.left - lefts.get(probe.line);
+    if (Math.abs(delta) >= 0.5) { shift.set(probe.line, Math.round((before + delta) * 100) / 100); changed = true; }
+  }
+  return { shift, base, changed };
+}
+
+// The space in front of each measured line, so consecutive lines keep the
+// preview's distances. It is made of the blank lines before it (which may
+// shrink to nothing) or, without blank lines, of extra padding on the line.
+function notebookCanvasAlignmentSpace(probes, tops, heights, current = { pad: new Map(), blank: new Map() }) {
+  const pad = new Map(current.pad), blank = new Map(current.blank), round = value => Math.round(Math.max(0, value) * 100) / 100;
+  let previous = null, changed = false;
+  for (const probe of probes) {
+    const have = tops.get(probe.line);
+    if (have == null) continue;
+    const delta = previous ? (probe.top - previous.want) - (have - previous.have) : probe.top - have;
+    if (Math.abs(delta) >= 0.5) {
+      const from = previous ? previous.line + 1 : 0, blanks = [...heights.keys()].filter(line => line >= from && line < probe.line);
+      const space = blanks.reduce((sum, line) => sum + heights.get(line), 0) + (pad.get(probe.line) || 0), wanted = round(space + delta);
+      if (blanks.length) {
+        const each = round(wanted / blanks.length);
+        for (const line of blanks) if (Math.abs((blank.has(line) ? blank.get(line) : heights.get(line)) - each) >= 0.25) { blank.set(line, each); changed = true; }
+        if (pad.delete(probe.line)) changed = true;
+      } else if (Math.abs((pad.get(probe.line) || 0) - wanted) >= 0.25) { pad.set(probe.line, wanted); changed = true; }
+    }
+    previous = { want: probe.top, have, line: probe.line };
+  }
+  return { pad, blank, changed };
+}
+
+function notebookCanvasEditorParityExtension(plugin) {
+  const { StateField, StateEffect } = require('@codemirror/state'), { Decoration, EditorView, ViewPlugin } = require('@codemirror/view');
+  const setSpace = StateEffect.define();
+  const indent = (shift, base) => shift == null ? '' : ';--cn-list-shift:' + shift + 'px;padding-inline-start:' + (base + shift) + 'px !important;text-indent:-' + (base + shift) + 'px !important';
+  const decoration = ({ from, pad, font, blank, shift, base }) => Decoration.line(blank == null
+    ? { attributes: { class: 'cn-canvas-aligned-line', style: (font || '') + (pad ? ';padding-top:' + pad + 'px !important' : '') + indent(shift, base) } }
+    : { blank: true, attributes: { class: 'cn-canvas-aligned-line', style: 'height:' + blank + 'px !important;min-height:0 !important;line-height:' + blank + 'px !important;padding-block:0 !important' } }).range(from);
+  const field = StateField.define({
+    create: () => Decoration.none,
+    update(value, transaction) {
+      value = value.map(transaction.changes);
+      // Typing into a squeezed blank line gives it its normal height back.
+      if (transaction.docChanged) value = value.update({ filter: (from, to, spec) => !spec.spec.blank || !transaction.newDoc.lineAt(from).text.trim() });
+      for (const effect of transaction.effects) if (effect.is(setSpace)) value = Decoration.set(effect.value.map(decoration), true);
+      return value;
+    },
+    provide: state => EditorView.decorations.from(state)
+  });
+  // The editor can be created before its iframe is attached to the card.
+  const aligner = ViewPlugin.fromClass(class {
+    constructor(view) {
+      this.passes = 0; this.space = { pad: new Map(), blank: new Map() }; this.lists = { shift: new Map(), base: new Map() }; this.sync(view);
+      if (!this.synced) view.requestMeasure({ read: () => null, write: () => this.sync(view) });
+    }
+    sync(view) {
+      if (this.synced) return;
+      const found = plugin.syncCanvasEditorCard(view);
+      if (!found) return;
+      this.synced = true;
+      const lines = plugin.canvasPreviewLinesFor(found);
+      if (!lines || lines.text !== view.state.doc.toString()) return;
+      // Fonts first: they decide wrapping, which the spacing passes then measure.
+      this.lines = lines; this.dispatch(view, lines);
+    }
+    dispatch(view, lines) {
+      Promise.resolve().then(() => {
+        if (this.lines !== lines || view.state.doc.toString() !== lines.text) return;
+        const doc = view.state.doc, from = line => doc.line(line + 1).from, { pad, blank } = this.space, { shift, base } = this.lists;
+        const content = new Map(lines.probes.filter(probe => probe.font).map(probe => [probe.line, { font: probe.font }]));
+        for (const [line, value] of pad) if (value > 0) content.set(line, { ...content.get(line), pad: value });
+        for (const [line, value] of shift) content.set(line, { ...content.get(line), shift: value, base: base.get(line) });
+        const specs = [...[...content].map(([line, value]) => ({ from: from(line), ...value })), ...[...blank].map(([line, value]) => ({ from: from(line), blank: value }))].sort((a, b) => a.from - b.from);
+        view.dispatch({ effects: setSpace.of(specs) });
+        this.schedule(view);
+      });
+    }
+    update(update) {
+      if (!this.synced) { this.sync(update.view); return; }
+      if (update.docChanged) this.lines = null;
+    }
+    schedule(view) {
+      if (this.waiting || !this.lines || this.passes >= NOTEBOOK_CANVAS_ALIGN_PASSES) return;
+      this.waiting = true;
+      view.requestMeasure({ read: current => notebookCanvasEditorLineTops(current, this.lines.probes), write: (measured, current) => { this.waiting = false; this.apply(current, measured); } });
+    }
+    apply(view, { tops, lefts, indents, heights }) {
+      const lines = this.lines;
+      if (!lines) return;
+      // Indents first: they change wrapping and with it the vertical layout.
+      const lists = notebookCanvasListShift(lines.probes, lefts, indents, this.lists);
+      const space = lists.changed ? { ...this.space, changed: false } : notebookCanvasAlignmentSpace(lines.probes, tops, heights, this.space);
+      this.passes++;
+      if (!lists.changed && !space.changed) { this.lines = null; return; }
+      this.lists = { shift: lists.shift, base: lists.base };
+      this.space = { pad: space.pad, blank: space.blank };
+      this.dispatch(view, lines);
+    }
+  });
+  return [field, aligner];
+}
+
+const notebookCanvasEditParityMethods = {
+  setupCanvasEditParity() {
+    this.canvasEditorDocuments = new Set();
+    this.registerEditorExtension(notebookCanvasEditorParityExtension(this));
+    this.register(() => {
+      for (const doc of this.canvasEditorDocuments) {
+        doc.getElementById?.('cn-canvas-editor-root')?.remove();
+        doc.documentElement?.classList.remove(...NOTEBOOK_CANVAS_CARD_CLASSES);
+      }
+      this.canvasEditorDocuments.clear();
+    });
+  },
+  syncCanvasEditorCard(view) {
+    const frame = notebookEditorFrame(view.dom), host = frame?.closest?.('.canvas-node');
+    if (!host) return null;
+    const root = view.dom.ownerDocument.documentElement;
+    for (const doc of this.canvasEditorDocuments || []) if (!doc.defaultView) this.canvasEditorDocuments.delete(doc);
+    this.canvasEditorDocuments?.add(view.dom.ownerDocument);
+    for (const name of NOTEBOOK_CANVAS_CARD_CLASSES) root.classList.toggle(name, host.classList.contains(name));
+    // Spacing variables use rem. Obsidian resets the iframe root to 15px while
+    // the app root is 16px, so the size lives in a style element of the iframe.
+    const main = host.ownerDocument, size = main.defaultView.getComputedStyle(main.documentElement).fontSize, doc = view.dom.ownerDocument;
+    let rule = doc.getElementById('cn-canvas-editor-root');
+    if (!rule) { rule = doc.createElement('style'); rule.id = 'cn-canvas-editor-root'; doc.head.appendChild(rule); }
+    const css = 'html:is(.tn-canvas-consistent-card,.tn-canvas-imported-card){font-size:' + size + ' !important}';
+    if (rule.textContent !== css) rule.textContent = css;
+    const found = this.canvasNodeForEditor(view.dom);
+    const card = found && this.canvasNotebookMetadata?.get(this.canvasViewFor(found.canvas)?.file?.path)?.cards?.[found.node.id];
+    // Imported cards set their base font on the preview sizer; mirror it on the editor content.
+    for (const property of ['fontFamily', 'fontSize', 'lineHeight']) view.contentDOM.style[property] = '';
+    if (card && card.appearance !== 'native') spatialTextMetrics(view.contentDOM, card.typography);
+    return found && this.canvasNotebookManaged(this.canvasViewFor(found.canvas)) ? found : null;
+  },
+  // Canvas hides the preview before it creates the editor. Showing it again for
+  // one synchronous measurement does not paint and keeps its rendered sections.
+  canvasPreviewLinesFor({ canvas, node }) {
+    const elements = [node.child?.previewEl, node.child?.previewMode?.renderer?.previewEl].filter(element => element?.style);
+    if (elements.length < 2) return null;
+    const displays = elements.map(element => element.style.display);
+    for (const element of elements) element.style.display = '';
+    try { return notebookCanvasPreviewLines(node, canvas.scale || 1); } catch (error) { console.warn('Classic Notebook: Canvas preview measurement', error); return null; } finally { elements.forEach((element, index) => { element.style.display = displays[index]; }); }
+  }
+};
+
 Object.assign(module.exports.prototype,nativeCanvasPageMethods);
+Object.assign(module.exports.prototype,notebookCanvasAutoHeightMethods);
+Object.assign(module.exports.prototype,notebookCanvasEditParityMethods);
 Object.assign(module.exports.prototype,notebookCanvasAnchorMethods);
 Object.assign(module.exports.prototype,notebookCanvasSearchMethods);
 
@@ -3485,16 +3932,17 @@ const notebookSettingsMethods = {
         return [{ type: 'group', heading: 'Pages and appearance', items: [
           { name: 'New page format', desc: 'Existing pages keep their format. Canvas-only notebooks always create Canvas pages.', control: { type: 'dropdown', key: 'newPageFormat', defaultValue: 'canvas', options: { canvas: 'Canvas', md: 'Markdown' } } },
           { name: 'Classic colors', desc: 'Use the classic light/dark palette. Turn off to use your current theme colors.', control: { type: 'toggle', key: 'classicColors', defaultValue: true } },
+          { name: 'Transparent Canvas cards', desc: 'Text cards on notebook pages have no background, so overlapping cards and images stay visible. Turn off for opaque native cards.', control: { type: 'toggle', key: 'transparentCanvasCards', defaultValue: true } },
           { name: 'Automatic links', desc: 'Display matching page names and aliases as links. Note text is unchanged.', control: { type: 'toggle', key: 'autoLinksEnabled', defaultValue: true } },
           { name: 'Collapse file explorer on startup', desc: 'Leave more room for the notebook page list.', control: { type: 'toggle', key: 'collapseExplorerOnStart', defaultValue: false } }
         ] }, { name: 'Manage automatic links', desc: 'Review aliases and explicit link rules for this vault.', action: () => new NotebookLinksModal(plugin).open() }];
       }
       getControlValue(key) { return plugin.data[key]; }
       async setControlValue(key, value) {
-        const valid = key === 'newPageFormat' ? ['canvas', 'md'].includes(value) : ['classicColors', 'autoLinksEnabled', 'collapseExplorerOnStart'].includes(key) && typeof value === 'boolean';
+        const valid = key === 'newPageFormat' ? ['canvas', 'md'].includes(value) : ['classicColors', 'transparentCanvasCards', 'autoLinksEnabled', 'collapseExplorerOnStart'].includes(key) && typeof value === 'boolean';
         if (!valid) return;
         plugin.data[key] = value;
-        if (key === 'classicColors') plugin.applyNotebookAppearance();
+        if (key === 'classicColors' || key === 'transparentCanvasCards') plugin.applyNotebookAppearance();
         if (key === 'autoLinksEnabled') plugin.rebuildAutoLinks();
         await plugin.saveData(plugin.data);
       }
@@ -3502,7 +3950,9 @@ const notebookSettingsMethods = {
     this.addSettingTab(new NotebookSettingsTab(this.app, this));
   },
   applyNotebookAppearance() {
-    this.app.workspace.containerEl.ownerDocument.body.classList.toggle('cn-classic-colors', this.data.classicColors !== false);
+    const body = this.app.workspace.containerEl.ownerDocument.body;
+    body.classList.toggle('cn-classic-colors', this.data.classicColors !== false);
+    body.classList.toggle('cn-transparent-cards', this.data.transparentCanvasCards !== false);
   },
   notebookNewPageFormat() {
     return this.data.nativeCanvasOnly ? 'canvas' : this.data.newPageFormat === 'md' ? 'md' : 'canvas';

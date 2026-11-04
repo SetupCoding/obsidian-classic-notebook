@@ -1,5 +1,11 @@
 # Beta validation and remaining work
 
+## 3.5.0 Canvas card checks
+
+Node tests cover card fitting, the floor height, manual resizes, read-only and unstable cards, pushing cards below, preview observation, the transparent-card setting, the alignment arithmetic and iframe editor detection with simulated objects.
+
+The behavior was also checked in Obsidian 1.14.5 on Windows in an isolated profile and vault, driven through the DevTools protocol with real keyboard input: typing grows a card and moves the cards below it while keeping their gaps, the caret stays visible, the card fits its rendered preview after editing, read-only Canvas and untouched cards overflow visibly with every preview section rendered, and typing into a squeezed blank line restores its height. Read and edit positions were compared on three copied real pages (imported OneNote typography with lists and numbered sections, a heading/list/rule page and a native page): every measured line start matched within 0.1px vertically and 0px horizontally, except the line holding the caret, whose Markdown syntax Obsidian reveals. Tables, images and other embeds are anchored by their block position only; their inner layout can still differ between modes. At non-100% zoom, subpixel rounding can leave 1px differences.
+
 ## 3.4.2 footer checks
 
 The browser suite exercises the actual bundle's native-footer relocation, preserved click handlers, keyboard activation, bottom-right placement with collapsed/expanded sidebar, hidden ribbon, status-bar clearance in wide/narrow viewports, dark styling, repeated setup and unload restoration (including a temporarily detached native sidebar). Live application verification is recorded separately from these simulated Obsidian objects.

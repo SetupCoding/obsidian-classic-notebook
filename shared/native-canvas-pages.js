@@ -121,6 +121,7 @@ const nativeCanvasPageMethods={
         if(pending)this.revealCanvasNotebookMatch(view,pending);
         else if(first&&initial!==false)this.positionCanvasNotebookStart(view);
       }
+      this.fitCanvasNotebookCards(view);
     }
   },
   trackCanvasNotebookViewport(view){

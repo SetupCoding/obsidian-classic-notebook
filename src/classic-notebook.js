@@ -5,7 +5,7 @@ const MAX_PAGE_DEPTH = 5;
 const LIGHT = ['#dce8c8', '#f6d2ae', '#ddc9b7', '#efc5df', '#f1bfc2', '#d9cae9', '#c4ddf1', '#d8dce4', '#d2e7b7', '#d5e3ee', '#f2e1ae'];
 const DARK = ['#3b513e', '#654e3c', '#554638', '#62475b', '#644448', '#51435f', '#3e5367', '#494d59', '#465a38', '#405566', '#62583b'];
 const COLOR_NAMES = ['Grün', 'Orange', 'Braun', 'Rosa', 'Rot', 'Violett', 'Blau', 'Grau', 'Hellgrün', 'Türkis', 'Gelb'];
-const DEFAULTS = { section: '', group: '', groups: [], order: [''], lastPages: {}, groupSections: {}, sectionColors: {}, pageLayouts: {}, collapsedPages: {}, pageMeta: {}, pagePositions: {}, pageSort: 'original', hiddenFolders: [], ribbonHidden: false, classicColors: true, newPageFormat: 'canvas', collapseExplorerOnStart: false };
+const DEFAULTS = { section: '', group: '', groups: [], order: [''], lastPages: {}, groupSections: {}, sectionColors: {}, pageLayouts: {}, collapsedPages: {}, pageMeta: {}, pagePositions: {}, pageSort: 'original', hiddenFolders: [], ribbonHidden: false, classicColors: true, transparentCanvasCards: true, newPageFormat: 'canvas', collapseExplorerOnStart: false };
 const parentPath = path => path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 const basename = path => path.split('/').at(-1);
 const readableColor = hex => {
@@ -316,7 +316,9 @@ const nativeNotebookMethods = {
     for (const leaf of this.app.workspace.getLeavesOfType('canvas')) {
       const canvas = leaf.view.canvas;
       if (!canvas?.nodes?.values) continue;
-      for (const node of canvas.nodes.values()) if (node.nodeEl?.contains(dom) && typeof node.setText === 'function') return { canvas, node };
+      // Obsidian 1.14 edits cards in an iframe inside the card element.
+      const frame = dom?.ownerDocument?.defaultView?.frameElement;
+      for (const node of canvas.nodes.values()) if ((node.nodeEl?.contains(dom) || (frame && node.nodeEl?.contains(frame))) && typeof node.setText === 'function') return { canvas, node };
     }
     return null;
   },
@@ -1396,11 +1398,13 @@ module.exports = class ClassicNotebook extends Plugin {
     await this.setupAutoLinks();
     await this.setupSpatialPages();
     this.setupNativeNotebookPages();
+    this.setupCanvasAutoHeight();
     this.setupNotebookTextLinks();
     this.initializeNotebookTextSwatches();
     this.refreshCustomTextColors();
     this.registerEditorExtension(notebookImportedFormatExtension());
     this.registerEditorExtension(notebookCanvasLayoutExtension());
+    this.setupCanvasEditParity();
     this.registerView(VIEW, leaf => new PagesView(leaf, this));
     for (const [type, role] of Object.entries(this.data.legacyViewTypes || {})) {
       if (type !== VIEW && type !== SPATIAL_VIEW && ['pages', 'spatial'].includes(role)) this.registerView(type, leaf => role === 'pages' ? new PagesView(leaf, this) : new SpatialPageView(leaf, this));
@@ -1457,7 +1461,7 @@ module.exports = class ClassicNotebook extends Plugin {
     this.unloadAutoLinks();
     window.clearTimeout(this.refreshTimer);
     if (this.saveTimer) { window.clearTimeout(this.saveTimer); void this.saveData(this.data); }
-    this.tabBar?.remove(); document.body.removeClass('classic-notebook', 'cn-classic-colors', 'cn-ribbon-hidden'); document.body.style.removeProperty('--tn-section');
+    this.tabBar?.remove(); document.body.removeClass('classic-notebook', 'cn-classic-colors', 'cn-transparent-cards', 'cn-ribbon-hidden'); document.body.style.removeProperty('--tn-section');
   }
   persist() { window.clearTimeout(this.saveTimer); this.saveTimer = window.setTimeout(() => this.saveData(this.data), 200); }
   scheduleRefresh() { window.clearTimeout(this.refreshTimer); this.refreshTimer = window.setTimeout(() => this.refresh(), 100); }
@@ -1974,7 +1978,11 @@ Object.assign(module.exports.prototype, notebookPageApi);
 // @include canvas-anchors
 // @include canvas-search
 // @include canvas-text-layout
+// @include canvas-auto-height
+// @include canvas-edit-parity
 Object.assign(module.exports.prototype,nativeCanvasPageMethods);
+Object.assign(module.exports.prototype,notebookCanvasAutoHeightMethods);
+Object.assign(module.exports.prototype,notebookCanvasEditParityMethods);
 Object.assign(module.exports.prototype,notebookCanvasAnchorMethods);
 Object.assign(module.exports.prototype,notebookCanvasSearchMethods);
 
